@@ -1,0 +1,14 @@
+{
+  "name": "@gamesense/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generated TypeScript types for the GameSense contracts",
+  "main": "ts/index.ts",
+  "types": "ts/index.ts",
+  "scripts": {
+    "gen": "json2ts -i schema/contracts.schema.json -o ts/index.ts --unreachableDefinitions --additionalProperties false --bannerComment \"/* Generated from packages/contracts (Pydantic). Do not edit by hand. Run: npm run contracts:gen */\""
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "^15.0.4"
+  }
+}

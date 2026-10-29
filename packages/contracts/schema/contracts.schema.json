@@ -1,0 +1,506 @@
+{
+  "$defs": {
+    "CaptureStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "buffered_frames": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fps": {
+          "description": "Measured frames per second entering the buffer.",
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "frame_height": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "frame_width": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "running": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "none",
+            "replay",
+            "windows"
+          ],
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Clip path or window title."
+        }
+      },
+      "required": [
+        "source",
+        "running",
+        "fps",
+        "buffered_frames"
+      ],
+      "title": "CaptureStatus",
+      "type": "object"
+    },
+    "CoachingDecision": {
+      "additionalProperties": false,
+      "description": "A proposed tip, its justification and its delivery conditions.",
+      "properties": {
+        "action": {
+          "description": "Machine-readable action, e.g. \"heal_before_engaging\".",
+          "type": "string"
+        },
+        "category": {
+          "description": "Skill area, e.g. \"survivability\" or \"economy\".",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "delivery": {
+          "enum": [
+            "immediate",
+            "next_lull",
+            "post_session"
+          ],
+          "type": "string"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "evidence": {
+          "description": "Observation ids that justify this tip.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expires_in_seconds": {
+          "maximum": 120,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "message": {
+          "description": "Headline shown on the overlay (<= 8 words).",
+          "maxLength": 80,
+          "type": "string"
+        },
+        "priority": {
+          "enum": [
+            "info",
+            "important",
+            "urgent"
+          ],
+          "type": "string"
+        },
+        "valid_while": {
+          "items": {
+            "$ref": "#/$defs/Condition"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "action",
+        "message",
+        "priority",
+        "confidence",
+        "delivery",
+        "expires_in_seconds"
+      ],
+      "title": "CoachingDecision",
+      "type": "object"
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "description": "A condition that must still hold for a tip to be shown (stale-result validator).",
+      "properties": {
+        "observation_type": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "eq",
+            "ne",
+            "lt",
+            "le",
+            "gt",
+            "ge",
+            "present",
+            "absent"
+          ],
+          "type": "string"
+        },
+        "value": {
+          "default": null
+        }
+      },
+      "required": [
+        "observation_type",
+        "op"
+      ],
+      "title": "Condition",
+      "type": "object"
+    },
+    "EngineEvent": {
+      "discriminator": {
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/HeartbeatEvent"
+        },
+        {
+          "$ref": "#/$defs/TipEvent"
+        },
+        {
+          "$ref": "#/$defs/StatusEvent"
+        }
+      ]
+    },
+    "GameState": {
+      "additionalProperties": false,
+      "description": "Standardized snapshot of the player's current situation.",
+      "properties": {
+        "activity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "High-level activity, e.g. \"exploration\" or \"combat\"."
+        },
+        "frame_refs": {
+          "description": "Ring-buffer frame ids used as evidence.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "game_id": {
+          "type": "string"
+        },
+        "game_specific": {
+          "additionalProperties": true,
+          "description": "Adapter-defined extension fields.",
+          "type": "object"
+        },
+        "genre": {
+          "type": "string"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/Observation"
+          },
+          "type": "array"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "unknowns": {
+          "description": "Things that matter but cannot be determined.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "game_id",
+        "genre",
+        "session_id",
+        "timestamp"
+      ],
+      "title": "GameState",
+      "type": "object"
+    },
+    "HabitObservation": {
+      "additionalProperties": false,
+      "description": "Evidence that may contribute to the player's long-term skill profile.",
+      "properties": {
+        "behavior": {
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "evidence_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "skill": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill",
+        "behavior",
+        "session_id",
+        "evidence_count",
+        "confidence"
+      ],
+      "title": "HabitObservation",
+      "type": "object"
+    },
+    "HeartbeatEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "capture": {
+          "$ref": "#/$defs/CaptureStatus"
+        },
+        "engine_version": {
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "heartbeat",
+          "default": "heartbeat",
+          "type": "string"
+        },
+        "uptime_seconds": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "timestamp",
+        "engine_version",
+        "uptime_seconds",
+        "capture"
+      ],
+      "title": "HeartbeatEvent",
+      "type": "object"
+    },
+    "ModelAnalysis": {
+      "additionalProperties": false,
+      "description": "Structured output requested from the live vision model on each trigger.",
+      "properties": {
+        "decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CoachingDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Null when the coach should stay silent."
+        },
+        "state": {
+          "$ref": "#/$defs/GameState"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "title": "ModelAnalysis",
+      "type": "object"
+    },
+    "Observation": {
+      "additionalProperties": false,
+      "description": "One fact or inference about the current game situation.",
+      "properties": {
+        "confidence": {
+          "description": "Estimated confidence; not a calibrated probability.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "description": "Observed facts are visible on screen or in telemetry; inferences are not.",
+          "enum": [
+            "observed",
+            "inferred"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "visual",
+            "ocr",
+            "telemetry",
+            "model",
+            "rule"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "description": "Observation kind, e.g. \"health_low\" or \"enemy_visible\".",
+          "type": "string"
+        },
+        "value": {
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "confidence",
+        "source",
+        "kind"
+      ],
+      "title": "Observation",
+      "type": "object"
+    },
+    "StatusEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": [
+            "ok",
+            "degraded",
+            "offline"
+          ],
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "status",
+          "default": "status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "level",
+        "message"
+      ],
+      "title": "StatusEvent",
+      "type": "object"
+    },
+    "TipEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/CoachingDecision"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "type": {
+          "const": "tip",
+          "default": "tip",
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "decision"
+      ],
+      "title": "TipEvent",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "GameSense contracts v0.1.0. Generated; do not edit.",
+  "properties": {
+    "CaptureStatus": {
+      "$ref": "#/$defs/CaptureStatus"
+    },
+    "CoachingDecision": {
+      "$ref": "#/$defs/CoachingDecision"
+    },
+    "Condition": {
+      "$ref": "#/$defs/Condition"
+    },
+    "EngineEvent": {
+      "$ref": "#/$defs/EngineEvent"
+    },
+    "GameState": {
+      "$ref": "#/$defs/GameState"
+    },
+    "HabitObservation": {
+      "$ref": "#/$defs/HabitObservation"
+    },
+    "HeartbeatEvent": {
+      "$ref": "#/$defs/HeartbeatEvent"
+    },
+    "ModelAnalysis": {
+      "$ref": "#/$defs/ModelAnalysis"
+    },
+    "Observation": {
+      "$ref": "#/$defs/Observation"
+    },
+    "StatusEvent": {
+      "$ref": "#/$defs/StatusEvent"
+    },
+    "TipEvent": {
+      "$ref": "#/$defs/TipEvent"
+    }
+  },
+  "title": "GameSenseContracts",
+  "type": "object"
+}

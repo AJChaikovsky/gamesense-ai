@@ -32,7 +32,7 @@ Hackathon (Nov 4) target: M0 and M1 plus the CS2 GSI local rules from M4, which 
 - GitHub Actions: lint and test for Python and TypeScript, Windows and macOS runners
 - `CONTRIBUTING.md` with dev setup for both machines
 
-**Done when:** `make dev` on the Mac plays a recorded clip through the engine and the dashboard shows the engine's heartbeat events. CI is green on both platforms.
+**Done when:** `npm run dev` on the Mac plays a recorded clip through the engine and the dashboard shows the engine's heartbeat events. CI is green on both platforms.
 
 ## M1: First live tip
 
