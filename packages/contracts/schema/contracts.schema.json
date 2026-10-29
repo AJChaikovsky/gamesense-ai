@@ -67,6 +67,19 @@
       "title": "CaptureStatus",
       "type": "object"
     },
+    "ClientMessage": {
+      "discriminator": {
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FeedbackMessage"
+        },
+        {
+          "$ref": "#/$defs/ControlMessage"
+        }
+      ]
+    },
     "CoachingDecision": {
       "additionalProperties": false,
       "description": "A proposed tip, its justification and its delivery conditions.",
@@ -152,6 +165,108 @@
       "title": "CoachingDecision",
       "type": "object"
     },
+    "CoachingStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "calls": {
+          "description": "Model calls this session.",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "game_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "game_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "hourly_budget_usd": {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "in_flight": {
+          "description": "A model request is currently running.",
+          "type": "boolean"
+        },
+        "last_latency_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "live_allowed": {
+          "description": "False when the game's policy blocks live coaching.",
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string"
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "policy_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provider": {
+          "type": "string"
+        },
+        "spend_usd": {
+          "description": "Estimated model spend this session.",
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "spend_usd_last_hour": {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "tips_delivered": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "paused",
+        "live_allowed",
+        "in_flight",
+        "calls",
+        "tips_delivered",
+        "spend_usd",
+        "spend_usd_last_hour",
+        "hourly_budget_usd"
+      ],
+      "title": "CoachingStatus",
+      "type": "object"
+    },
     "Condition": {
       "additionalProperties": false,
       "description": "A condition that must still hold for a tip to be shown (stale-result validator).",
@@ -183,6 +298,29 @@
       "title": "Condition",
       "type": "object"
     },
+    "ControlMessage": {
+      "additionalProperties": false,
+      "description": "Sent by the desktop app to pause or resume coaching.",
+      "properties": {
+        "action": {
+          "enum": [
+            "pause",
+            "resume"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "control",
+          "default": "control",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "ControlMessage",
+      "type": "object"
+    },
     "EngineEvent": {
       "discriminator": {
         "propertyName": "type"
@@ -198,6 +336,34 @@
           "$ref": "#/$defs/StatusEvent"
         }
       ]
+    },
+    "FeedbackMessage": {
+      "additionalProperties": false,
+      "description": "Sent by the desktop app when the player rates or dismisses a tip.",
+      "properties": {
+        "rating": {
+          "enum": [
+            "useful",
+            "not_useful",
+            "dismissed"
+          ],
+          "type": "string"
+        },
+        "tip_id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "feedback",
+          "default": "feedback",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tip_id",
+        "rating"
+      ],
+      "title": "FeedbackMessage",
+      "type": "object"
     },
     "GameState": {
       "additionalProperties": false,
@@ -307,6 +473,17 @@
       "properties": {
         "capture": {
           "$ref": "#/$defs/CaptureStatus"
+        },
+        "coaching": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CoachingStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "engine_version": {
           "type": "string"
@@ -470,14 +647,26 @@
     "CaptureStatus": {
       "$ref": "#/$defs/CaptureStatus"
     },
+    "ClientMessage": {
+      "$ref": "#/$defs/ClientMessage"
+    },
     "CoachingDecision": {
       "$ref": "#/$defs/CoachingDecision"
+    },
+    "CoachingStatus": {
+      "$ref": "#/$defs/CoachingStatus"
     },
     "Condition": {
       "$ref": "#/$defs/Condition"
     },
+    "ControlMessage": {
+      "$ref": "#/$defs/ControlMessage"
+    },
     "EngineEvent": {
       "$ref": "#/$defs/EngineEvent"
+    },
+    "FeedbackMessage": {
+      "$ref": "#/$defs/FeedbackMessage"
     },
     "GameState": {
       "$ref": "#/$defs/GameState"

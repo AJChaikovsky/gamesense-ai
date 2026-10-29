@@ -20,10 +20,28 @@ body,
   height: 100%;
 }
 
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* The overlay window is transparent: no page background at all. */
+html.overlay,
+html.overlay body {
+  background: transparent;
+  overflow: hidden;
 }

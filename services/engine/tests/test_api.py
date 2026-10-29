@@ -42,3 +42,31 @@ def test_websocket_streams_heartbeats_with_capture(sample_clip: Path) -> None:
     assert isinstance(last, HeartbeatEvent)
     assert last.capture.source == "replay"
     assert last.capture.buffered_frames > 0
+
+
+def test_websocket_client_messages_reach_coaching() -> None:
+    from gamesense.coaching import CoachingLoop
+    from gamesense.providers.mock import MockProvider
+
+    buf = FrameRingBuffer(capacity=10)
+    engine = Engine(buf, None, heartbeat_interval=0.05)
+    engine.coaching = CoachingLoop(buf, MockProvider(latency_s=0), engine.bus.publish)
+    with (
+        TestClient(create_app(engine, TOKEN)) as client,
+        client.websocket_connect(f"/ws?token={TOKEN}") as ws,
+    ):
+        ws.send_text('{"type":"control","action":"pause"}')
+        ws.send_text('{"type":"feedback","tip_id":"t1","rating":"not_useful"}')
+        ws.send_text("garbage")
+        for _ in range(20):
+            event = engine_event_adapter.validate_json(ws.receive_text())
+            if (
+                isinstance(event, HeartbeatEvent)
+                and event.coaching
+                and event.coaching.paused
+                and engine.coaching.feedback
+            ):
+                break
+        else:
+            raise AssertionError("pause/feedback never applied")
+    assert engine.coaching.feedback[0].rating == "not_useful"

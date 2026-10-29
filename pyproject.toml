@@ -39,7 +39,7 @@ packages = ["gamesense", "gamesense_contracts"]
 mypy_path = ["services/engine/src", "packages/contracts/src"]
 
 [[tool.mypy.overrides]]
-module = ["cv2", "cv2.*"]
+module = ["cv2", "cv2.*", "windows_capture", "psutil"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

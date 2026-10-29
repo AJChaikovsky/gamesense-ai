@@ -3,12 +3,17 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hmac
+import logging
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect, status
+from gamesense_contracts import client_message_adapter
+from pydantic import ValidationError
 
 from .. import __version__
 from ..engine import Engine
+
+log = logging.getLogger(__name__)
 
 
 def _token_ok(expected: str, provided: str | None) -> bool:
@@ -46,7 +51,7 @@ def create_app(engine: Engine, token: str) -> FastAPI:
         await websocket.accept()
         async with engine.bus.subscribe() as queue:
             await websocket.send_text(engine.heartbeat().model_dump_json())
-            receiver = asyncio.create_task(_drain(websocket))
+            receiver = asyncio.create_task(_receive(websocket, engine))
             try:
                 while not receiver.done():
                     get = asyncio.create_task(queue.get())
@@ -65,8 +70,12 @@ def create_app(engine: Engine, token: str) -> FastAPI:
     return app
 
 
-async def _drain(websocket: WebSocket) -> None:
-    """Read (and for now ignore) client messages until the socket closes."""
+async def _receive(websocket: WebSocket, engine: Engine) -> None:
+    """Apply client messages (feedback, pause/resume) until the socket closes."""
     with contextlib.suppress(WebSocketDisconnect):
         while True:
-            await websocket.receive_text()
+            raw = await websocket.receive_text()
+            try:
+                engine.handle_client_message(client_message_adapter.validate_json(raw))
+            except ValidationError:
+                log.warning("ignoring invalid client message: %.200s", raw)

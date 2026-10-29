@@ -85,3 +85,12 @@ def test_engine_event_discriminator() -> None:
     )
     parsed = engine_event_adapter.validate_json(event.model_dump_json())
     assert isinstance(parsed, HeartbeatEvent)
+
+
+def test_client_messages() -> None:
+    from gamesense_contracts import ControlMessage, FeedbackMessage, client_message_adapter
+
+    fb = client_message_adapter.validate_json('{"type":"feedback","tip_id":"t1","rating":"useful"}')
+    assert isinstance(fb, FeedbackMessage)
+    ctl = client_message_adapter.validate_json('{"type":"control","action":"pause"}')
+    assert isinstance(ctl, ControlMessage)

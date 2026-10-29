@@ -43,6 +43,9 @@ def make_clip(
                 (230, 230, 230),
                 2,
             )
+            # Every 4 s a half-second red "damage flash" gives triggers a real event.
+            if (i % (4 * fps)) < fps // 2:
+                frame[:] = (frame * 0.4 + np.array([30, 30, 200]) * 0.6).astype(np.uint8)
             writer.write(frame)
     finally:
         writer.release()
