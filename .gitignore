@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Node / Tauri
+node_modules/
+dist/
+target/
+
+# Local data (never commit gameplay or user data)
+*.sqlite
+*.sqlite3
+*.db
+evals/clips/
+*.mp4
+*.mkv
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
