@@ -26,7 +26,7 @@ Hackathon (Nov 4) target: M0 and M1 plus the CS2 GSI local rules from M4, which 
 - Monorepo layout (`apps/desktop`, `services/engine`, `packages/contracts`, `knowledge`, `evals`, `docs`)
 - Python engine scaffold: uv, ruff, mypy, pytest, and a `gamesense` package with module stubs
 - Contracts in Pydantic, plus JSON Schema export and TypeScript type generation
-- Tauri 2 plus React, TypeScript, Tailwind and shadcn scaffold that launches the engine as a sidecar (dev mode can run it separately)
+- Electron (electron-vite) plus React, TypeScript, Tailwind and shadcn scaffold. The main process launches the engine as a child process (dev mode can run it separately). All shell access goes through a single preload bridge so Tauri stays a cheap swap
 - `ReplaySource` that plays an MP4 at real-time speed into the ring buffer
 - Local WebSocket with the token handshake and a `TipEvent` schema
 - GitHub Actions: lint and test for Python and TypeScript, Windows and macOS runners
@@ -43,6 +43,7 @@ Hackathon (Nov 4) target: M0 and M1 plus the CS2 GSI local rules from M4, which 
 - Scheduler with at most one request in flight. Basic cooldown and duplicate suppression
 - Generic game adapter (Tier 1) and a simple game detector (process name)
 - Spend meter in logs, with a hard hourly cap in config
+- Measure the desktop app's RAM and CPU during play against the Electron budget in ADR-002
 
 **Done when:** playing Minecraft, CS2 or the RPG in borderless mode on the Windows PC shows relevant tips on the overlay. A tip appears within about 5 seconds of a situation, there's no visible FPS drop, and nothing shows when nothing is happening. The same pipeline runs on the Mac against replays.
 
@@ -101,7 +102,7 @@ Hackathon (Nov 4) target: M0 and M1 plus the CS2 GSI local rules from M4, which 
 
 - Onboarding (consent, borderless check, overlay placement test, intensity)
 - Settings (hotkeys, overlay appearance, capture rate, budgets, accessibility)
-- Engine packaged as a sidecar binary (PyInstaller or Nuitka). Signed Windows installer (MSI or NSIS) and auto-update
+- Engine packaged as a standalone binary (PyInstaller or Nuitka) bundled with the app. Signed Windows installer (electron-builder, NSIS) and auto-update
 - Performance budget: engine CPU and RAM caps, measured game FPS impact on the 2080 Super
 - Crash and error reporting (opt-in), structured logs
 

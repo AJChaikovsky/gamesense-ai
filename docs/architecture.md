@@ -16,7 +16,7 @@ Everything runs on the player's PC. A cloud gateway is added at Milestone 8.
 │  Game (borderless/windowed)          CS2 GSI ──HTTP POST──┐         │
 │        │ Windows Graphics Capture                         │         │
 │        ▼                                                  ▼         │
-│  ┌─────────────────── Python engine (sidecar) ─────────────────────┐│
+│  ┌─────────────────── Python engine (child proc) ─────────────────┐│
 │  │ capture ─► ring buffer ─► fast path (diff, HUD OCR, telemetry)  ││
 │  │                               │ trigger                         ││
 │  │                               ▼                                 ││
@@ -26,13 +26,13 @@ Everything runs on the player's PC. A cloud gateway is added at Milestone 8.
 │  │   validator ─► ranker / cooldown ─► WebSocket                   ││
 │  └────────────────────────────────────────┬────────────────────────┘│
 │                                           │ ws://127.0.0.1 (token)  │
-│  ┌──────────── Tauri app (Rust + React) ──▼────────────────────────┐│
+│  ┌─────────── Electron app (TS + React) ──▼────────────────────────┐│
 │  │  overlay window (click-through)   dashboard window   tray       ││
 │  └─────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-- The Tauri app starts the engine as a sidecar process and stops it on exit.
+- The Electron main process starts the engine as a child process and stops it on exit.
 - The engine binds only to `127.0.0.1` on a random port, with a per-launch auth token passed to the frontend. No other process can talk to it.
 - The engine works headless too, which is how it runs on macOS against replays and in the eval harness.
 

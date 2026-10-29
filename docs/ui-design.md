@@ -4,7 +4,7 @@ GameSense has two surfaces with opposite goals. The **overlay** has to be glance
 
 ## Overlay (in-game)
 
-A transparent, click-through, always-on-top Tauri window covering the game.
+A transparent, click-through, always-on-top Electron window covering the game.
 
 **Principles**
 

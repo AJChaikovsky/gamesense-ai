@@ -36,23 +36,30 @@ Additional constraints from AJ:
 
 - The capture loop runs in its own thread and writes into a fixed-size ring buffer. The model call never blocks it.
 - Frames stay as NumPy arrays. We downscale before any encode, and only encode the frames we actually send.
-- If profiling ever shows a hot path in Python, move just that function to Rust (PyO3) or into the Tauri side. Don't rewrite the engine.
+- If profiling ever shows a hot path in Python, move just that function to a native extension (Rust via PyO3, or C++). Don't rewrite the engine.
 
 **Revisit if:** profiling on the 2080 Super shows the engine costing a noticeable number of game FPS, or the fast path can't hold its sampling rate.
 
-## ADR-002: Desktop shell is Tauri 2, not Electron
+## ADR-002: Desktop shell is Electron, with Tauri as the fallback
 
-**Choice:** Tauri 2 with a React, TypeScript and Vite frontend. The Python engine ships as a Tauri sidecar binary.
+**Choice (AJ, 2026-10-29):** Electron with a React, TypeScript and Vite frontend (electron-vite). The Electron main process starts the Python engine as a child process.
 
-**Why:**
+**Why Electron:**
 
-- It runs alongside a game, so idle footprint matters. Tauri uses the system WebView2 on Windows, so it uses far less RAM and disk than Electron, which bundles Chromium.
-- It supports what the overlay needs: transparent, undecorated, always-on-top windows, click-through (`set_ignore_cursor_events`), global hotkeys, a system tray and a sidecar process.
-- The UI code is the same React/TypeScript that AJ's v0.1 planned for Electron. Only the shell changes.
+- It's the most mature option, with the largest ecosystem and documentation, and it renders identically on every machine.
+- It supports what the overlay needs: transparent, frameless, always-on-top windows (the `screen-saver` level), click-through (`setIgnoreMouseEvents(true, { forward: true })`), global shortcuts, a tray and child processes.
+- Everything stays in TypeScript, with no Rust to learn.
 
-**Known limitation (applies to Electron too):** desktop overlays don't draw over exclusive-fullscreen games. Players need borderless or windowed mode, which all three launch games support. Onboarding has to check this and explain it.
+**Cost to watch:** Electron bundles Chromium, so it usually uses about 150 to 400 MB of RAM and is a larger download. GameSense runs while games run, so footprint matters.
 
-**Revisit if:** WebView2 transparency or click-through misbehaves on the target machine. Electron is the drop-in fallback because the React code carries over.
+**Switch criterion:** in M1 and M7 we measure the desktop app's RAM and CPU on the 2080 Super machine during play. If the overlay plus dashboard process tree goes over about **300 MB RAM** or costs noticeable game FPS, we move the shell to Tauri 2. To keep that switch cheap:
+
+- All UI lives in plain React with no Electron APIs in components. Electron access goes through one small `preload` bridge (`window.gamesense.*`) that Tauri can re-implement.
+- The engine talks to the UI over a local WebSocket, not Electron IPC, so it doesn't care which shell is in use.
+
+**Known limitation (applies to Tauri too):** desktop overlays don't draw over exclusive-fullscreen games. Players need borderless or windowed mode, which all three launch games support. Onboarding has to check this and explain it.
+
+**Security baseline:** `contextIsolation: true`, `nodeIntegration: false`, sandboxed renderers, a strict CSP, and no provider keys in any renderer.
 
 ## ADR-003: UI is React, Tailwind and shadcn/ui, with an overlay-first design
 
