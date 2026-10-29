@@ -4,7 +4,7 @@ A universal, proactive AI gaming coach. GameSense watches your game, works out w
 
 It observes and recommends. It never sends inputs, reads game memory or touches anti-cheat.
 
-> **Status:** Milestone 1 (first live tip). The engine captures gameplay (live on Windows, recorded clips anywhere), asks a vision model for advice and shows validated tips in a click-through overlay. See [CONTRIBUTING.md](CONTRIBUTING.md) to set up and run it, and [`docs/`](docs/) for the plan.
+> **Status:** Milestone 2 (eval harness and model bake-off). The engine captures gameplay (live on Windows, recorded clips anywhere), asks a vision model for advice and shows validated tips in a click-through overlay. `npm run eval` scores models on labeled clips. See [CONTRIBUTING.md](CONTRIBUTING.md) to set up and run it, and [`docs/`](docs/) for the plan.
 
 ## Documents
 

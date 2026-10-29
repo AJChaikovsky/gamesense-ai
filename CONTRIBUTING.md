@@ -61,6 +61,12 @@ ANTHROPIC_API_KEY=sk-ant-...
 # or
 GAMESENSE_PROVIDER=google      # Gemini 3.1 Flash-Lite
 GEMINI_API_KEY=...
+# or
+GAMESENSE_PROVIDER=openai      # GPT-5.6 Luna
+OPENAI_API_KEY=sk-...
+# or
+GAMESENSE_PROVIDER=muse        # Meta Muse Spark 1.1 (public preview)
+MUSE_API_KEY=...
 ```
 
 `GAMESENSE_HOURLY_BUDGET_USD` (default `0.50`) is a hard cap on estimated spend per rolling hour. The dashboard shows calls, tips, spend and latency.
@@ -73,6 +79,8 @@ GEMINI_API_KEY=...
 | Mark tip useful | `Alt+Shift+Up` |
 | Mark tip not useful | `Alt+Shift+Down` |
 | Pause or resume coaching | `Alt+Shift+P` |
+
+Useful and not-useful ratings are saved with the tip's text (never frames) to `~/.gamesense/feedback.jsonl`, so tips you rate can become eval cases later. Set `GAMESENSE_SAVE_FEEDBACK=0` to turn this off.
 
 ### What works where
 
@@ -90,6 +98,10 @@ GEMINI_API_KEY=...
 2. In `.env`, set `GAMESENSE_CAPTURE=window`, then set `GAMESENSE_WINDOW` to part of the game's window title (or leave it empty to capture whatever window is in front when the engine starts).
 3. Run `npm run dev`, switch to the game, and play. Tips appear top-right.
 4. Check the dashboard's **App memory** figure while playing. Its budget is 300 MB (ADR-002); if it stays well above that, we switch the shell to Tauri.
+
+## Evals and the model bake-off (Milestone 2)
+
+`npm run eval` scores models on labeled clips and writes a comparison report. See [evals/README.md](evals/README.md) for recording clips, labeling them and running paid comparisons.
 
 ## Checks (same as CI)
 

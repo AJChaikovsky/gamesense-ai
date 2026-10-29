@@ -27,6 +27,7 @@ from .api.server import create_app
 from .capture import FrameRingBuffer, ReplaySource
 from .capture.base import CaptureSource
 from .coaching import CoachingConfig, CoachingLoop
+from .coaching.feedback import FeedbackLog, default_data_dir
 from .coaching.trigger import TriggerPolicy
 from .config import DEFAULT_MODELS, Settings, load_env_file
 from .engine import Engine
@@ -121,6 +122,9 @@ def build_engine(s: Settings, *, coach: bool = True) -> Engine:
             engine.bus.publish,
             config=config,
             fixed_game=game_by_id(s.game) if s.game else None,
+            feedback_log=(
+                FeedbackLog(default_data_dir() / "feedback.jsonl") if s.save_feedback else None
+            ),
         )
         log.info(
             "coach: provider=%s model=%s budget=$%.2f/h game=%s",

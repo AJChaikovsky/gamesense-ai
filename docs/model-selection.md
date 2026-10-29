@@ -20,11 +20,11 @@ The model is configuration, not architecture (see ADR-005). This doc records cur
 | Google | Gemini 3.5 Flash-Lite | $0.30 | $2.50 | |
 | Google | Gemini 3.8 Flash | $0.75 | $3.75 | Promotional price. Doubles on Jan 1, 2027 |
 | Google | Gemini 4 Argon | $2.00 | $10.00 | Promotional price. Doubles on Dec 1, 2026 |
-| OpenAI | GPT-5.6 Luna | $0.20 | $1.20 | Vision support to confirm in the benchmark |
+| OpenAI | GPT-5.6 Luna | $0.20 | $1.20 | Vision and strict structured outputs supported. Cached input $0.02 |
 | OpenAI | GPT-5.6 Terra | $2.00 | $12.00 | |
-| Meta | Muse Spark 1.1 | $1.25 | $4.25 | Public preview. API image input is sparsely documented, so confirm in the benchmark |
+| Meta | Muse Spark 1.1 | $1.25 | $4.25 | Public preview (US). OpenAI-compatible API at `api.meta.ai/v1` with image input. Structured output undocumented, so we ask for JSON in the prompt |
 
-Sources: Anthropic pricing (via the Claude API reference), [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing), [OpenAI pricing roundup (mem0)](https://mem0.ai/library/llms-and-models/openai-api-pricing), [Muse Spark 1.1 pricing (The Decoder)](https://the-decoder.com/metas-muse-spark-1-1-api-pricing-squeezes-openai-and-anthropic-as-the-ai-price-war-heats-up/). Prices move often, so re-check before committing to subscription pricing.
+Sources: Anthropic pricing (via the Claude API reference), [GPT-5.6 Luna model page](https://developers.openai.com/api/docs/models/gpt-5.6-luna.md), [Build with Muse Spark (Meta)](https://dev.meta.ai/resources/blog/build-with-muse-spark), [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing), [OpenAI pricing roundup (mem0)](https://mem0.ai/library/llms-and-models/openai-api-pricing), [Muse Spark 1.1 pricing (The Decoder)](https://the-decoder.com/metas-muse-spark-1-1-api-pricing-squeezes-openai-and-anthropic-as-the-ai-price-war-heats-up/). Prices move often, so re-check before committing to subscription pricing.
 
 ## Rough live-coaching cost per hour of play
 
@@ -52,7 +52,7 @@ Takeaways:
 ## Benchmark plan (Milestone 2)
 
 1. **Dataset:** about 20 short clips per game (60 in total) recorded by AJ. Each has human labels: what's observable (HUD values, threats, activity) and what a good coach would say, or "stay silent."
-2. **Harness:** replays each clip through the real engine, with the same triggers and the same prompt, and swaps only the provider.
+2. **Harness:** rebuilds what the live coach would see at each labeled moment (same frame sampling, fast-path signals, prompt and confidence threshold) and swaps only the provider. Trigger timing over whole clips is scored in M3.
 3. **Metrics:**
    - Perception accuracy against labels
    - Tip usefulness and groundedness, judged by a strong model plus AJ spot-checks
@@ -60,7 +60,12 @@ Takeaways:
    - p50 and p95 latency
    - Cost per hour
    - Schema-valid output rate
-4. **Decision rule:** pick the cheapest live model within a few points of the best usefulness score with p95 latency under 3 seconds. Pick the deep model on review quality alone. Re-run the benchmark whenever a provider ships a new cheap tier.
+4. **How to run it:** `uv run gamesense-eval run --providers anthropic,google,openai,muse --judge anthropic --yes` (details in [evals/README.md](../evals/README.md)). Each case sends the frames the live coach would have seen at the labeled moment, with the live prompt.
+5. **Decision rule:** pick the cheapest live model within a few points of the best usefulness score with p95 latency under 3 seconds. Pick the deep model on review quality alone. Re-run the benchmark whenever a provider ships a new cheap tier.
+
+## Results
+
+Not run yet. Waiting on labeled clips of real play. Results and the chosen live and deep models get recorded here with numbers.
 
 ## Hackathon note
 

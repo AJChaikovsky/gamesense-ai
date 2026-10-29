@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
 import numpy as np
@@ -136,3 +137,20 @@ async def test_static_screen_is_silent(value: int) -> None:
     loop, events, clock = _loop(MockProvider(latency_s=0))
     await _drive(loop, clock, [value] * 30)
     assert loop.status().calls == 0 and not events
+
+
+async def test_ratings_are_saved_with_tip_text(tmp_path: Any) -> None:
+    from gamesense.coaching.feedback import FeedbackLog
+
+    log_path = tmp_path / "feedback.jsonl"
+    loop, events, clock = _loop(MockProvider(latency_s=0))
+    loop.feedback_log = FeedbackLog(log_path)
+    await _drive(loop, clock, [0, 200, 0, 200])
+    tip = next(e for e in events if isinstance(e, TipEvent)).decision
+    loop.handle_client_message(FeedbackMessage(tip_id=tip.id, rating="useful"))
+    loop.handle_client_message(FeedbackMessage(tip_id="tip_unknown", rating="not_useful"))
+    rows = [json.loads(line) for line in log_path.read_text().splitlines()]
+    assert len(rows) == 1
+    assert rows[0]["rating"] == "useful" and rows[0]["message"] == tip.message
+    assert rows[0]["game_id"] == "minecraft" and rows[0]["provider"] == "mock"
+    assert "image" not in json.dumps(rows[0])
