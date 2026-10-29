@@ -1,4 +1,8 @@
-"""Game adapters: detection, capabilities, live-coaching policy, HUD regions.
+"""Game adapters: detection, capabilities, live-coaching policy.
 
-Implemented in M1/M4.
+M1 ships detection and the policy gate; HUD regions and telemetry arrive in M4.
 """
+
+from .registry import GENERIC, KNOWN_GAMES, GameProfile, detect_game, game_by_id
+
+__all__ = ["GENERIC", "KNOWN_GAMES", "GameProfile", "detect_game", "game_by_id"]

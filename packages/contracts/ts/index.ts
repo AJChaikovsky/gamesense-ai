@@ -2,6 +2,11 @@
 
 /**
  * This interface was referenced by `GameSenseContracts`'s JSON-Schema
+ * via the `definition` "ClientMessage".
+ */
+export type ClientMessage = FeedbackMessage | ControlMessage;
+/**
+ * This interface was referenced by `GameSenseContracts`'s JSON-Schema
  * via the `definition` "EngineEvent".
  */
 export type EngineEvent = HeartbeatEvent | TipEvent | StatusEvent;
@@ -11,9 +16,13 @@ export type EngineEvent = HeartbeatEvent | TipEvent | StatusEvent;
  */
 export interface GameSenseContracts {
   CaptureStatus?: CaptureStatus;
+  ClientMessage?: ClientMessage;
   CoachingDecision?: CoachingDecision;
+  CoachingStatus?: CoachingStatus;
   Condition?: Condition;
+  ControlMessage?: ControlMessage;
   EngineEvent?: EngineEvent;
+  FeedbackMessage?: FeedbackMessage;
   GameState?: GameState;
   HabitObservation?: HabitObservation;
   HeartbeatEvent?: HeartbeatEvent;
@@ -40,6 +49,27 @@ export interface CaptureStatus {
    * Clip path or window title.
    */
   target?: string | null;
+}
+/**
+ * Sent by the desktop app when the player rates or dismisses a tip.
+ *
+ * This interface was referenced by `GameSenseContracts`'s JSON-Schema
+ * via the `definition` "FeedbackMessage".
+ */
+export interface FeedbackMessage {
+  rating: "useful" | "not_useful" | "dismissed";
+  tip_id: string;
+  type?: "feedback";
+}
+/**
+ * Sent by the desktop app to pause or resume coaching.
+ *
+ * This interface was referenced by `GameSenseContracts`'s JSON-Schema
+ * via the `definition` "ControlMessage".
+ */
+export interface ControlMessage {
+  action: "pause" | "resume";
+  type?: "control";
 }
 /**
  * A proposed tip, its justification and its delivery conditions.
@@ -87,10 +117,43 @@ export interface Condition {
 }
 /**
  * This interface was referenced by `GameSenseContracts`'s JSON-Schema
+ * via the `definition` "CoachingStatus".
+ */
+export interface CoachingStatus {
+  /**
+   * Model calls this session.
+   */
+  calls: number;
+  game_id?: string | null;
+  game_name?: string | null;
+  hourly_budget_usd: number;
+  /**
+   * A model request is currently running.
+   */
+  in_flight: boolean;
+  last_latency_ms?: number | null;
+  /**
+   * False when the game's policy blocks live coaching.
+   */
+  live_allowed: boolean;
+  model: string;
+  paused: boolean;
+  policy_reason?: string | null;
+  provider: string;
+  /**
+   * Estimated model spend this session.
+   */
+  spend_usd: number;
+  spend_usd_last_hour: number;
+  tips_delivered: number;
+}
+/**
+ * This interface was referenced by `GameSenseContracts`'s JSON-Schema
  * via the `definition` "HeartbeatEvent".
  */
 export interface HeartbeatEvent {
   capture: CaptureStatus;
+  coaching?: CoachingStatus | null;
   engine_version: string;
   timestamp: string;
   type?: "heartbeat";

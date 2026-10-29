@@ -14,7 +14,10 @@ from gamesense_contracts import (
     CONTRACTS_VERSION,
     CaptureStatus,
     CoachingDecision,
+    CoachingStatus,
     Condition,
+    ControlMessage,
+    FeedbackMessage,
     GameState,
     HabitObservation,
     HeartbeatEvent,
@@ -34,9 +37,12 @@ MODELS: list[type[BaseModel]] = [
     HabitObservation,
     ModelAnalysis,
     CaptureStatus,
+    CoachingStatus,
     HeartbeatEvent,
     TipEvent,
     StatusEvent,
+    FeedbackMessage,
+    ControlMessage,
 ]
 
 OUT = Path(__file__).resolve().parent.parent / "schema" / "contracts.schema.json"
@@ -76,6 +82,10 @@ def build() -> dict[str, Any]:
     _strip_titles(defs)
     defs["EngineEvent"] = {
         "oneOf": [{"$ref": f"#/$defs/{n}"} for n in ("HeartbeatEvent", "TipEvent", "StatusEvent")],
+        "discriminator": {"propertyName": "type"},
+    }
+    defs["ClientMessage"] = {
+        "oneOf": [{"$ref": f"#/$defs/{n}"} for n in ("FeedbackMessage", "ControlMessage")],
         "discriminator": {"propertyName": "type"},
     }
     return {

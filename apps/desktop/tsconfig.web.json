@@ -13,7 +13,8 @@
     "noEmit": true,
     "paths": {
       "@renderer/*": ["./src/renderer/src/*"],
-      "@contracts": ["../../packages/contracts/ts/index.ts"]
+      "@contracts": ["../../packages/contracts/ts/index.ts"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src/renderer/src/**/*", "src/preload/*.d.ts", "src/shared/**/*"]

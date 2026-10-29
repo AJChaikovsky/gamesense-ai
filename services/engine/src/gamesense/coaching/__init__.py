@@ -1,4 +1,5 @@
-"""Trigger policy, request scheduling, stale-result validation, ranking and delivery.
+"""Trigger policy, request scheduling, stale-result checks, cooldowns and delivery."""
 
-Implemented in M1/M3.
-"""
+from .loop import CoachingConfig, CoachingLoop
+
+__all__ = ["CoachingConfig", "CoachingLoop"]

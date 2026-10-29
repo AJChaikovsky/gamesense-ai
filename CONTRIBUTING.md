@@ -45,6 +45,52 @@ uv run gamesense-engine --replay evals/clips/sample.mp4 --token dev
 curl -H "x-gamesense-token: dev" http://127.0.0.1:54321/health
 ```
 
+## Live coaching (Milestone 1)
+
+The coach is configured through environment variables or a `.env` file at the repo root. Start from the template:
+
+```bash
+cp .env.example .env
+```
+
+By default `GAMESENSE_PROVIDER=mock`, a free offline coach that never reads pixels. Use it to exercise the full pipeline (triggers, cooldowns, overlay, hotkeys) at no cost. To use a real model, set the provider and its key:
+
+```bash
+GAMESENSE_PROVIDER=anthropic   # Claude Haiku 5.5
+ANTHROPIC_API_KEY=sk-ant-...
+# or
+GAMESENSE_PROVIDER=google      # Gemini 3.1 Flash-Lite
+GEMINI_API_KEY=...
+```
+
+`GAMESENSE_HOURLY_BUDGET_USD` (default `0.50`) is a hard cap on estimated spend per rolling hour. The dashboard shows calls, tips, spend and latency.
+
+**Overlay hotkeys** (global):
+
+| Action | Shortcut |
+| --- | --- |
+| Dismiss tip | `Alt+Shift+X` |
+| Mark tip useful | `Alt+Shift+Up` |
+| Mark tip not useful | `Alt+Shift+Down` |
+| Pause or resume coaching | `Alt+Shift+P` |
+
+### What works where
+
+| | macOS (replay) | Windows desktop (live game) |
+| --- | --- | --- |
+| Engine, coach, model calls, spend cap | Yes | Yes |
+| Dashboard and overlay window | Yes | Yes |
+| Live game capture (Windows Graphics Capture) | No | Yes |
+| Game auto-detection from the foreground window | No (set `GAMESENSE_GAME`) | Yes |
+| FPS and RAM impact on a real game | No | Yes |
+
+**Testing on the Windows desktop:**
+
+1. Set the game to **borderless windowed** (overlays can't draw over exclusive fullscreen).
+2. In `.env`, set `GAMESENSE_CAPTURE=window`, then set `GAMESENSE_WINDOW` to part of the game's window title (or leave it empty to capture whatever window is in front when the engine starts).
+3. Run `npm run dev`, switch to the game, and play. Tips appear top-right.
+4. Check the dashboard's **App memory** figure while playing. Its budget is 300 MB (ADR-002); if it stays well above that, we switch the shell to Tauri.
+
 ## Checks (same as CI)
 
 ```bash
@@ -77,6 +123,6 @@ docs/                  Architecture, decisions, milestones
 
 - **Shell independence:** React code never imports Electron. Everything the renderer needs from the shell goes through `window.gamesense` (`apps/desktop/src/shared/bridge.ts`), so a move to Tauri only touches the preload.
 - **Engine and UI coupling:** the engine talks to the UI over its local WebSocket only.
-- **API keys:** never put provider keys in the renderer or commit them. Use a local `.env` file (gitignored) until the OS keychain integration lands.
+- **API keys:** never put provider keys in the renderer or commit them. They live in the local `.env` file (gitignored), which only the engine reads, until the OS keychain integration lands.
 - **Gameplay footage:** don't commit it. Clips stay in `evals/clips/`, which is gitignored.
 - **Branches and PRs:** one milestone issue (or part of one) per PR, and CI must be green before merging.

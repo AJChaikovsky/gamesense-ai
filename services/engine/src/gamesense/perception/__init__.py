@@ -1,1 +1,5 @@
-"""Fast-path signals (frame diff, HUD crops, OCR) and GameState assembly. Implemented in M1/M3."""
+"""Fast-path signals (frame diff now; HUD crops and OCR in M3/M4) and GameState assembly."""
+
+from .fast_path import FastPath, Signals
+
+__all__ = ["FastPath", "Signals"]

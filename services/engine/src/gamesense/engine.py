@@ -8,9 +8,11 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 from gamesense_contracts import CaptureStatus, HeartbeatEvent, StatusEvent, TipEvent
+from gamesense_contracts.events import ControlMessage, FeedbackMessage
 
 from . import __version__
 from .capture import CaptureSource, FrameRingBuffer
+from .coaching import CoachingLoop
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class EventBus:
 class Engine:
     """Owns the capture source, ring buffer and event bus.
 
-    M0 only publishes heartbeats; perception and coaching attach here in M1.
+    The coaching loop is optional so the engine can run capture-only (tests, tools).
     """
 
     def __init__(
@@ -64,6 +66,7 @@ class Engine:
         self.buffer = buffer
         self.source = source
         self.bus = EventBus()
+        self.coaching: CoachingLoop | None = None
         self.heartbeat_interval = heartbeat_interval
         self._started_at = time.monotonic()
         self._tasks: list[asyncio.Task[None]] = []
@@ -86,7 +89,12 @@ class Engine:
             engine_version=__version__,
             uptime_seconds=round(time.monotonic() - self._started_at, 2),
             capture=self.capture_status(),
+            coaching=self.coaching.status() if self.coaching else None,
         )
+
+    def handle_client_message(self, msg: FeedbackMessage | ControlMessage) -> None:
+        if self.coaching is not None:
+            self.coaching.handle_client_message(msg)
 
     async def start(self) -> None:
         self._started_at = time.monotonic()
@@ -94,6 +102,8 @@ class Engine:
             self.source.start()
             log.info("capture started: %s %s", self.source.kind, self.source.target)
         self._tasks.append(asyncio.create_task(self._heartbeat_loop(), name="heartbeat"))
+        if self.coaching is not None:
+            self._tasks.append(asyncio.create_task(self.coaching.run(), name="coaching"))
 
     async def stop(self) -> None:
         for task in self._tasks:
@@ -102,6 +112,8 @@ class Engine:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         self._tasks.clear()
+        if self.coaching is not None:
+            await self.coaching.provider.aclose()
         if self.source is not None:
             # Joining the capture thread blocks briefly; keep it off the event loop.
             await asyncio.to_thread(self.source.stop)
