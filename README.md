@@ -4,7 +4,7 @@ A universal, proactive AI gaming coach. GameSense watches your game, works out w
 
 It observes and recommends. It never sends inputs, reads game memory or touches anti-cheat.
 
-> **Status:** planning. No application code yet. The architecture, stack decisions and milestones are under review in [`docs/`](docs/).
+> **Status:** Milestone 0 (foundations). The engine and desktop app run end to end against recorded gameplay. See [CONTRIBUTING.md](CONTRIBUTING.md) to set up and run it, and [`docs/`](docs/) for the plan.
 
 ## Documents
 
@@ -32,7 +32,7 @@ It observes and recommends. It never sends inputs, reads game memory or touches 
 | A FromSoftware-style action RPG | RPG | Screen only (Tier 1 to 2) |
 | Minecraft | Sandbox | Screen first, optional mod telemetry later (Tier 1 to 3) |
 
-## Repository layout (planned)
+## Repository layout
 
 ```
 apps/desktop/         Electron + React overlay, onboarding, settings, session dashboard

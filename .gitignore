@@ -9,6 +9,7 @@ __pycache__/
 # Node / Tauri
 node_modules/
 dist/
+out/
 target/
 
 # Local data (never commit gameplay or user data)

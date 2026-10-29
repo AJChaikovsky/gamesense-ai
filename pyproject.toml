@@ -1,0 +1,48 @@
+[project]
+name = "gamesense-workspace"
+version = "0.0.0"
+description = "GameSense AI monorepo (Python workspace root)"
+requires-python = ">=3.12"
+dependencies = ["gamesense-engine", "gamesense-contracts"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/contracts", "services/engine"]
+
+[tool.uv.sources]
+gamesense-engine = { workspace = true }
+gamesense-contracts = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "httpx2",
+  "mypy>=1.13",
+  "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["gamesense", "gamesense_contracts"]
+mypy_path = ["services/engine/src", "packages/contracts/src"]
+
+[[tool.mypy.overrides]]
+module = ["cv2", "cv2.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["services/engine/tests", "packages/contracts/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
