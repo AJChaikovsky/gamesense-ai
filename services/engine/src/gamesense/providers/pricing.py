@@ -13,6 +13,9 @@ PRICES_PER_MTOK: dict[str, tuple[float, float]] = {
     "gemini-3.1-flash-lite": (0.25, 1.50),
     "gemini-3.5-flash-lite": (0.30, 2.50),
     "gemini-3.8-flash": (0.75, 3.75),
+    "gpt-5.6-luna": (0.20, 1.20),
+    "gpt-5.6-terra": (2.00, 12.00),
+    "muse-spark-1.1": (1.25, 4.25),
     "mock-coach": (0.0, 0.0),
 }
 

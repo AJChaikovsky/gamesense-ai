@@ -12,12 +12,14 @@ dependencies = [
   "python-dotenv>=1.0",
   "anthropic>=1.0",
   "google-genai>=1.0",
+  "openai>=3.0",
   "psutil>=6.0",
   "windows-capture>=2.0; sys_platform == 'win32'",
 ]
 
 [project.scripts]
 gamesense-engine = "gamesense.__main__:main"
+gamesense-eval = "gamesense.evals.cli:main"
 
 [tool.uv.sources]
 gamesense-contracts = { workspace = true }

@@ -9,13 +9,15 @@ from typing import Literal
 
 from dotenv import load_dotenv
 
-ProviderName = Literal["mock", "anthropic", "google"]
+ProviderName = Literal["mock", "anthropic", "google", "openai", "muse"]
 CaptureMode = Literal["auto", "replay", "window", "none"]
 
 DEFAULT_MODELS: dict[str, str] = {
     "mock": "mock-coach",
     "anthropic": "claude-haiku-5-5",
     "google": "gemini-3.1-flash-lite",
+    "openai": "gpt-5.6-luna",
+    "muse": "muse-spark-1.1",
 }
 
 
@@ -52,6 +54,7 @@ class Settings:
     heartbeat_trigger_seconds: float = 20.0
     scene_change_threshold: float = 0.06
     loop: bool = True
+    save_feedback: bool = True
     extra: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -74,4 +77,5 @@ class Settings:
             window=os.environ.get("GAMESENSE_WINDOW") or None,
             game=os.environ.get("GAMESENSE_GAME") or None,
             hourly_budget_usd=_float_env("GAMESENSE_HOURLY_BUDGET_USD", 0.50),
+            save_feedback=os.environ.get("GAMESENSE_SAVE_FEEDBACK", "1") != "0",
         )

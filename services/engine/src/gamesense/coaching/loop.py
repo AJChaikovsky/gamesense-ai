@@ -25,6 +25,7 @@ from ..providers.prompt import context_block, system_prompt
 from .budget import SpendMeter
 from .convert import to_contracts
 from .cooldown import Cooldown
+from .feedback import FeedbackLog
 from .trigger import TriggerPolicy
 
 log = logging.getLogger(__name__)
@@ -76,6 +77,7 @@ class CoachingLoop:
         fixed_game: GameProfile | None = None,
         detect_foreground: Callable[[], WindowInfo | None] = foreground_window,
         session_id: str | None = None,
+        feedback_log: FeedbackLog | None = None,
     ) -> None:
         self.buffer = buffer
         self.provider = provider
@@ -87,6 +89,7 @@ class CoachingLoop:
         self.paused = False
         self.tips_delivered = 0
         self.feedback: list[FeedbackMessage] = []
+        self.feedback_log = feedback_log
         self.suppressed: dict[str, int] = {}
         self._fixed_game = fixed_game
         self._detect = detect_foreground
@@ -112,6 +115,14 @@ class CoachingLoop:
         else:
             self.feedback.append(msg)
             log.info("tip feedback: %s %s", msg.tip_id, msg.rating)
+            if self.feedback_log is not None:
+                self.feedback_log.record(
+                    msg,
+                    session_id=self.session_id,
+                    game_id=self._game.game_id,
+                    provider=self.provider.name,
+                    model=self.provider.model,
+                )
 
     def status(self) -> CoachingStatus:
         now = time.monotonic()
@@ -249,6 +260,8 @@ class CoachingLoop:
         decision = decision.model_copy(update={"expires_in_seconds": remaining})
         cooldown.record(decision.action, decision.message, now)
         self.tips_delivered += 1
+        if self.feedback_log is not None:
+            self.feedback_log.remember_tip(decision)
         self.publish(TipEvent(timestamp=_utcnow(), decision=decision))
 
     def _on_error(self, message: str, now: float) -> None:

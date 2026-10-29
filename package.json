@@ -10,6 +10,7 @@
     "dev": "npm run dev -w @gamesense/desktop",
     "engine": "uv run gamesense-engine",
     "sample-clip": "uv run python -m gamesense.tools.make_sample_clip",
+    "eval": "uv run gamesense-eval run",
     "contracts:gen": "uv run python packages/contracts/scripts/export_schema.py && npm run gen -w @gamesense/contracts",
     "check": "npm run typecheck -w @gamesense/desktop && npm run test -w @gamesense/desktop",
     "check:engine": "uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run pytest"
