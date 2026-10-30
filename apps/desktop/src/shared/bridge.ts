@@ -11,6 +11,11 @@ export type EngineConnection =
 
 export type Hotkey = 'dismiss' | 'useful' | 'not_useful' | 'pause'
 
+export interface HotkeyStatus {
+  accelerator: string
+  registered: boolean
+}
+
 export interface AppMetrics {
   /** Memory of all app processes (main, renderers, GPU), in MB: private bytes on Windows, working set elsewhere. */
   memoryMb: number
@@ -26,17 +31,22 @@ export interface GameSenseBridge {
   setOverlayVisible(visible: boolean): Promise<void>
   /** Subscribe to global hotkeys; returns an unsubscribe function. */
   onHotkey(listener: (hotkey: Hotkey) => void): () => void
-  hotkeyLabels: Record<Hotkey, string>
+  /** Each hotkey's shortcut and whether the OS accepted it (false = another app holds it). */
+  getHotkeyStatus(): Promise<Record<Hotkey, HotkeyStatus>>
 }
 
 export const IPC = {
   engineConnection: 'engine:connection',
   appMetrics: 'app:metrics',
   overlayVisible: 'overlay:visible',
-  hotkey: 'hotkey'
+  hotkey: 'hotkey',
+  hotkeyStatus: 'hotkey:status'
 } as const
 
-/** Default global shortcuts (Electron accelerator syntax). Rebinding arrives in M7. */
+/**
+ * Default global shortcuts (Electron accelerator syntax). Until the settings screen
+ * lands in M7, override one with GAMESENSE_HOTKEY_<NAME>, e.g. GAMESENSE_HOTKEY_DISMISS=Ctrl+Shift+X.
+ */
 export const DEFAULT_HOTKEYS: Record<Hotkey, string> = {
   dismiss: 'Alt+Shift+X',
   useful: 'Alt+Shift+Up',

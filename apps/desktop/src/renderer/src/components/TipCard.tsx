@@ -10,7 +10,7 @@ import {
   Swords,
   Zap
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
 import { cn } from '../lib/utils'
 
 const EDGE: Record<CoachingDecision['priority'], string> = {
@@ -37,16 +37,43 @@ function iconFor(category: string): LucideIcon {
   return Lightbulb
 }
 
+/**
+ * The countdown bar runs as one compositor animation (scaleX) from the remaining
+ * fraction to zero, so it moves smoothly instead of stepping on each React tick.
+ * It restarts only when the tip's timing changes.
+ */
+function useCountdown(shownAt: number, expiresAt: number) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const now = Date.now()
+    const total = expiresAt - shownAt
+    const remaining = Math.max(0, expiresAt - now)
+    const from = total > 0 ? Math.min(1, remaining / total) : 0
+    const animation = el.animate([{ transform: `scaleX(${from})` }, { transform: 'scaleX(0)' }], {
+      duration: remaining,
+      easing: 'linear',
+      fill: 'forwards'
+    })
+    return () => animation.cancel()
+  }, [shownAt, expiresAt])
+  return ref
+}
+
 export function TipCard({
   decision,
-  fraction,
+  shownAt,
+  expiresAt,
   className
 }: {
   decision: CoachingDecision
-  fraction: number
+  shownAt: number
+  expiresAt: number
   className?: string
 }): ReactNode {
   const Icon = iconFor(decision.category)
+  const bar = useCountdown(shownAt, expiresAt)
   return (
     <div
       role="status"
@@ -67,8 +94,8 @@ export function TipCard({
       </div>
       <div className="h-1 bg-white/5">
         <div
-          className={cn('h-full transition-[width] duration-200 ease-linear', BAR[decision.priority])}
-          style={{ width: `${Math.round(fraction * 100)}%` }}
+          ref={bar}
+          className={cn('h-full origin-left will-change-transform', BAR[decision.priority])}
         />
       </div>
     </div>

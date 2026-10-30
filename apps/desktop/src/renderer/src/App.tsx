@@ -1,4 +1,4 @@
-import type { AppMetrics } from '@shared/bridge'
+import type { AppMetrics, Hotkey, HotkeyStatus } from '@shared/bridge'
 import {
   Activity,
   Cpu,
@@ -79,6 +79,27 @@ function useAppMetrics(): AppMetrics | undefined {
   return metrics
 }
 
+const HOTKEY_NAMES: Record<Hotkey, string> = {
+  dismiss: 'Dismiss',
+  useful: 'Useful',
+  not_useful: 'Not useful',
+  pause: 'Pause'
+}
+
+/** Which hotkeys registered, and the last press the app actually received. */
+function useHotkeyDiagnostics(): {
+  status?: Record<Hotkey, HotkeyStatus>
+  last?: { hotkey: Hotkey; at: Date }
+} {
+  const [status, setStatus] = useState<Record<Hotkey, HotkeyStatus>>()
+  const [last, setLast] = useState<{ hotkey: Hotkey; at: Date }>()
+  useEffect(() => {
+    void window.gamesense.getHotkeyStatus().then(setStatus)
+    return window.gamesense.onHotkey((hotkey) => setLast({ hotkey, at: new Date() }))
+  }, [])
+  return { status, last }
+}
+
 function money(usd: number): string {
   return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`
 }
@@ -89,7 +110,7 @@ export default function App(): ReactNode {
   const [overlayVisible, setOverlayVisible] = useState(true)
   const capture = heartbeat?.capture
   const coach = heartbeat?.coaching
-  const keys = window.gamesense.hotkeyLabels
+  const hotkeys = useHotkeyDiagnostics()
 
   const toggleOverlay = (): void => {
     const next = !overlayVisible
@@ -227,9 +248,30 @@ export default function App(): ReactNode {
           {capture?.target ?? 'No capture source. Run "npm run sample-clip" to create a demo clip.'}
         </p>
         <h2 className="mt-4 font-medium text-muted">Overlay hotkeys</h2>
-        <p className="mt-2 text-muted">
-          Dismiss <kbd>{keys.dismiss}</kbd> · Useful <kbd>{keys.useful}</kbd> · Not useful{' '}
-          <kbd>{keys.not_useful}</kbd> · Pause <kbd>{keys.pause}</kbd>
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-muted">
+          {(Object.keys(HOTKEY_NAMES) as Hotkey[]).map((hotkey) => {
+            const ok = hotkeys.status?.[hotkey].registered
+            return (
+              <li key={hotkey} className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    'size-1.5 rounded-full',
+                    ok === undefined ? 'bg-muted' : ok ? 'bg-ok' : 'bg-danger'
+                  )}
+                  title={ok === false ? 'Not registered: another app uses this shortcut' : 'Registered'}
+                />
+                {HOTKEY_NAMES[hotkey]} <kbd>{hotkeys.status?.[hotkey].accelerator ?? '…'}</kbd>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="mt-1 text-xs text-muted">
+          {hotkeys.last
+            ? `Last hotkey received: ${HOTKEY_NAMES[hotkeys.last.hotkey]} at ${hotkeys.last.at.toLocaleTimeString()}`
+            : 'No hotkey presses received yet.'}
+          {hotkeys.status && Object.values(hotkeys.status).some((h) => !h.registered)
+            ? ' A red dot means another app holds that shortcut.'
+            : ''}
         </p>
       </section>
     </main>
