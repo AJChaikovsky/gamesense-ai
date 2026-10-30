@@ -6,10 +6,22 @@ import { registerHotkeys, unregisterHotkeys } from './hotkeys'
 import { createOverlayWindow } from './overlay'
 
 const isDev = !app.isPackaged
+const repoRoot = resolve(app.getAppPath(), '..', '..')
+
+// In dev, read the repo's .env so GAMESENSE_OVERLAY and hotkey overrides work like
+// the engine's settings. Real environment variables still win.
+if (isDev) {
+  try {
+    process.loadEnvFile(join(repoRoot, '.env'))
+  } catch {
+    // no .env: defaults apply
+  }
+}
+
 const overlayEnabled = process.env.GAMESENSE_OVERLAY !== '0'
 
 const engine = new EngineProcess({
-  repoRoot: resolve(app.getAppPath(), '..', '..'),
+  repoRoot,
   isDev,
   resourcesPath: process.resourcesPath
 })
@@ -76,7 +88,8 @@ app.whenReady().then(() => {
   })
 
   engine.start()
-  registerHotkeys()
+  const hotkeyStatus = registerHotkeys()
+  ipcMain.handle(IPC.hotkeyStatus, () => hotkeyStatus)
   createDashboardWindow()
   if (overlayEnabled) overlay = createOverlayWindow(isDev)
 

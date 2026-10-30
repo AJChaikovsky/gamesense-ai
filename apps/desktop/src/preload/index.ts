@@ -1,10 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
   type AppMetrics,
-  DEFAULT_HOTKEYS,
   type EngineConnection,
   type GameSenseBridge,
   type Hotkey,
+  type HotkeyStatus,
   IPC
 } from '../shared/bridge'
 
@@ -18,7 +18,8 @@ const bridge: GameSenseBridge = {
     ipcRenderer.on(IPC.hotkey, handler)
     return () => ipcRenderer.removeListener(IPC.hotkey, handler)
   },
-  hotkeyLabels: DEFAULT_HOTKEYS
+  getHotkeyStatus: () =>
+    ipcRenderer.invoke(IPC.hotkeyStatus) as Promise<Record<Hotkey, HotkeyStatus>>
 }
 
 contextBridge.exposeInMainWorld('gamesense', bridge)
