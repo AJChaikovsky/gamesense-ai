@@ -7,7 +7,6 @@ import {
   dismiss,
   emptyQueue,
   enqueue,
-  remainingFraction,
   type TipQueueState
 } from './lib/tipQueue'
 import { cn } from './lib/utils'
@@ -76,7 +75,8 @@ export default function OverlayApp(): ReactNode {
           <TipCard
             key={queue.active.decision.id}
             decision={queue.active.decision}
-            fraction={remainingFraction(queue.active, Date.now())}
+            shownAt={queue.active.shownAt}
+            expiresAt={queue.active.expiresAt}
           />
         )}
       </div>
