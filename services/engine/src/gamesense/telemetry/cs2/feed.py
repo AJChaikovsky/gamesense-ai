@@ -78,6 +78,12 @@ class Cs2Feed:
     def observations(self) -> dict[str, Any]:
         return observation_values(self.state) if self.state is not None and self.connected() else {}
 
+    def in_combat(self) -> bool | None:
+        """A live round is combat while you're alive; freeze time, round end or death is a lull."""
+        if self.state is None or not self.connected():
+            return None
+        return self.state.alive and self.state.round_phase == "live"
+
     def close(self) -> None:
         if self._record is not None:
             self._record.close()

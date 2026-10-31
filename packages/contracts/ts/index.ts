@@ -124,8 +124,16 @@ export interface CoachingStatus {
    * Model calls this session.
    */
   calls: number;
+  /**
+   * Set while model tips are paused; local rule tips keep working.
+   */
+  fallback_reason?: ("provider_error" | "budget") | null;
   game_id?: string | null;
   game_name?: string | null;
+  /**
+   * Tips waiting for a lull in the action.
+   */
+  held_tips?: number;
   hourly_budget_usd: number;
   /**
    * A model request is currently running.

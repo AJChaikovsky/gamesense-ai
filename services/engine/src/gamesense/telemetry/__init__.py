@@ -20,6 +20,10 @@ class TelemetryFeed(Protocol):
 
     def observations(self) -> dict[str, Any]: ...
 
+    def in_combat(self) -> bool | None:
+        """True mid-fight, False in a lull (buy time, round over, dead), None if unknown."""
+        ...
+
     def close(self) -> None: ...
 
 

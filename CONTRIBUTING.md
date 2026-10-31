@@ -71,6 +71,8 @@ MUSE_API_KEY=...
 
 `GAMESENSE_HOURLY_BUDGET_USD` (default `0.50`) is a hard cap on estimated spend per rolling hour. The dashboard shows calls, tips, spend and latency.
 
+**When the coach speaks.** Every tip carries `valid_while` conditions (for example `health le 25`). Just before a tip is shown, the coach checks them against the freshest facts it has: live game data first, then the latest model reading. If they no longer hold, the tip is dropped as stale. Model tips marked `info` wait for a lull (buy time, round end or death in CS2, or no "combat" or "boss" reading from the model for 15 s) for up to 30 s. Important and urgent tips show right away. If the provider fails, retries back off from 10 s to 5 minutes. If the hourly budget runs out, model calls pause. In both cases the dashboard shows a banner and rule tips from live game data keep coming.
+
 **Overlay hotkeys** (global):
 
 | Action | Shortcut |

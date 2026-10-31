@@ -10,6 +10,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Literal
 
 import cv2
 from gamesense_contracts import CoachingDecision, CoachingStatus, StatusEvent, TipEvent
@@ -28,6 +29,7 @@ from .convert import to_contracts
 from .cooldown import Cooldown
 from .feedback import FeedbackLog
 from .trigger import TriggerPolicy
+from .validator import first_failed
 
 log = logging.getLogger(__name__)
 
@@ -42,9 +44,14 @@ class CoachingConfig:
     jpeg_quality: int = 80
     min_confidence: float = 0.55
     max_situation_change: float = 0.5  # summed scene change since the request
-    error_backoff_s: float = 10.0
+    error_backoff_s: float = 10.0  # doubles per consecutive failure, up to max_backoff_s
+    max_backoff_s: float = 300.0
     detect_interval_s: float = 2.0
     hourly_budget_usd: float = 0.50
+    hold_max_s: float = 30.0  # how long a next_lull tip may wait for a lull
+    max_held: int = 3
+    combat_memory_s: float = 15.0  # a model "combat" reading counts for this long
+    combat_words: tuple[str, ...] = ("combat", "fight", "boss", "battle", "duel")
     trigger: TriggerPolicy = field(default_factory=TriggerPolicy)
     cooldown: Cooldown = field(default_factory=Cooldown)
 
@@ -56,6 +63,18 @@ class _InFlight:
     frame_ids: list[str]
     reason: str
     change_since: float = 0.0
+
+
+@dataclass(slots=True)
+class _Held:
+    """A tip waiting for a lull (``next_lull`` delivery)."""
+
+    decision: CoachingDecision
+    deadline: float
+    local: bool
+
+
+_PRIORITY_RANK = {"urgent": 0, "important": 1, "info": 2}
 
 
 def encode_jpeg(frame: Frame, width: int, quality: int) -> bytes:
@@ -103,8 +122,12 @@ class CoachingLoop:
         self._backoff_until = 0.0
         self._last_latency_ms: int | None = None
         self._last_activity: str | None = None
+        self._last_activity_at = 0.0
         self._last_observations: list[str] = []
-        self._degraded = False
+        self._last_obs_values: dict[str, str] = {}
+        self._held: list[_Held] = []
+        self._consecutive_errors = 0
+        self._fallback: Literal["provider_error", "budget"] | None = None
 
     @property
     def game(self) -> GameProfile:
@@ -150,6 +173,8 @@ class CoachingLoop:
                 else None
             ),
             local_tips=self.local_tips,
+            held_tips=len(self._held),
+            fallback_reason=self._fallback,
         )
 
     # -- main loop ----------------------------------------------------------------
@@ -170,6 +195,9 @@ class CoachingLoop:
         if self._in_flight is not None and self._in_flight.task.done():
             await self._finish(self._in_flight, now)
             self._in_flight = None
+        if self._fallback == "budget" and self.spend.allows_call(now):
+            self._leave_fallback("Budget available again. Model tips resumed.")
+        self._release_held(now)
 
         frame = self.buffer.latest()
         if frame is None or frame.id == self._last_frame_id:
@@ -186,6 +214,7 @@ class CoachingLoop:
             return
         if not self.spend.allows_call(now):
             self._suppress("budget")
+            self._enter_fallback("budget", "Hourly model budget reached; model tips are paused.")
             return
         self.config.trigger.mark_called(now)
         await self._start_request(signals, reason, now)
@@ -230,11 +259,9 @@ class CoachingLoop:
 
         self.spend.record(result.cost_usd, now)
         self._last_latency_ms = result.latency_ms
-        if self._degraded:
-            self._degraded = False
-            self.publish(
-                StatusEvent(timestamp=_utcnow(), level="ok", message="Coach is back online.")
-            )
+        self._consecutive_errors = 0
+        if self._fallback == "provider_error":
+            self._leave_fallback("Coach is back online.")
         log.info(
             "analysis done in %d ms (%s), in=%d out=%d cost=$%.5f tip=%s",
             result.latency_ms,
@@ -248,7 +275,9 @@ class CoachingLoop:
             result.analysis, game=self._game, session_id=self.session_id, frame_ids=job.frame_ids
         )
         self._last_activity = state.activity
+        self._last_activity_at = now
         self._last_observations = [f"{o.type}={o.value}" for o in state.observations]
+        self._last_obs_values = {o.type: str(o.value) for o in state.observations}
         if decision is not None:
             self._deliver(decision, job, now)
 
@@ -261,12 +290,82 @@ class CoachingLoop:
         if job.change_since > self.config.max_situation_change and decision.priority != "urgent":
             return self._suppress("situation_changed")
         remaining = max(2, int(decision.expires_in_seconds - age))
-        self._publish_tip(decision.model_copy(update={"expires_in_seconds": remaining}), now)
+        self._route(decision.model_copy(update={"expires_in_seconds": remaining}), now)
 
     def submit_local(self, decision: CoachingDecision, now: float | None = None) -> bool:
-        """Deliver a tip from a local rule (no model call). True when it was shown."""
+        """Deliver a tip from a local rule (no model call).
+
+        True when it was shown or queued for the next lull. Local rules work
+        without the model, so they keep coaching while the provider is down or
+        the budget is spent (fallback mode).
+        """
         now = time.monotonic() if now is None else now
-        return self._publish_tip(decision, now, local=True)
+        return self._route(decision, now, local=True)
+
+    # -- delivery -------------------------------------------------------------------
+    def facts(self) -> dict[str, object]:
+        """Freshest known observation values: telemetry wins over model readings."""
+        telemetry = self.telemetry.observations() if self.telemetry is not None else {}
+        return {**self._last_obs_values, **telemetry}
+
+    def in_combat(self, now: float) -> bool:
+        if self.telemetry is not None and self.telemetry.connected():
+            exact = self.telemetry.in_combat()
+            if exact is not None:
+                return exact
+        activity = (self._last_activity or "").lower()
+        recent = now - self._last_activity_at <= self.config.combat_memory_s
+        return recent and any(word in activity for word in self.config.combat_words)
+
+    def _wants_lull(self, decision: CoachingDecision, local: bool) -> bool:
+        # Model "info" tips are never time-critical, so they wait out fights. Local
+        # rules know their timing and ask for next_lull explicitly when they want it.
+        return decision.delivery == "next_lull" or (not local and decision.priority == "info")
+
+    def _route(self, decision: CoachingDecision, now: float, *, local: bool = False) -> bool:
+        if self.paused or not self._game.live_allowed:
+            self._suppress("paused_or_blocked")
+            return False
+        if first_failed(decision.valid_while, self.facts()) is not None:
+            self._suppress("stale")
+            return False
+        if self._wants_lull(decision, local) and self.in_combat(now):
+            return self._hold(decision, now, local)
+        return self._publish_tip(decision, now, local=local)
+
+    def _hold(self, decision: CoachingDecision, now: float, local: bool) -> bool:
+        if any(h.decision.action == decision.action for h in self._held):
+            self._suppress("repeat")
+            return False
+        wait = max(decision.expires_in_seconds, self.config.hold_max_s)
+        self._held.append(_Held(decision, now + wait, local))
+        self._held.sort(key=lambda h: (_PRIORITY_RANK[h.decision.priority], h.deadline))
+        while len(self._held) > self.config.max_held:
+            self._held.pop()
+            self._suppress("held_overflow")
+        log.debug("tip held for the next lull: %s", decision.message)
+        return True
+
+    def _release_held(self, now: float) -> None:
+        if not self._held:
+            return
+        for held in [h for h in self._held if h.deadline <= now]:
+            self._held.remove(held)
+            self._suppress("expired")
+        if not self._held or self.paused or self.in_combat(now):
+            return
+        facts = self.facts()
+        for held in list(self._held):
+            if first_failed(held.decision.valid_while, facts) is not None:
+                self._held.remove(held)
+                self._suppress("stale")
+        if not self._held:
+            return
+        best = self._held[0]
+        d = best.decision
+        if self.config.cooldown.allows(d.action, d.message, d.priority, now) is None:
+            self._held.pop(0)
+            self._publish_tip(d, now, local=best.local)
 
     def _publish_tip(self, decision: CoachingDecision, now: float, *, local: bool = False) -> bool:
         if self.paused or not self._game.live_allowed:
@@ -286,17 +385,29 @@ class CoachingLoop:
         return True
 
     def _on_error(self, message: str, now: float) -> None:
-        log.warning("model call failed: %s", message)
-        self._backoff_until = now + self.config.error_backoff_s
-        if not self._degraded:
-            self._degraded = True
-            self.publish(
-                StatusEvent(
-                    timestamp=_utcnow(),
-                    level="degraded",
-                    message=f"Coach unavailable, retrying shortly: {message[:160]}",
-                )
-            )
+        self._consecutive_errors += 1
+        backoff = min(
+            self.config.error_backoff_s * 2 ** (self._consecutive_errors - 1),
+            self.config.max_backoff_s,
+        )
+        log.warning("model call failed (%d in a row, retry in %.0f s): %s",
+                    self._consecutive_errors, backoff, message)  # fmt: skip
+        self._backoff_until = now + backoff
+        self._enter_fallback("provider_error", f"Coach unavailable, retrying: {message[:160]}")
+
+    # -- fallback mode -----------------------------------------------------------------
+    def _enter_fallback(self, reason: Literal["provider_error", "budget"], message: str) -> None:
+        if self._fallback == reason:
+            return
+        self._fallback = reason
+        if self.telemetry is not None and self.telemetry.connected():
+            message += " Tips from live game data keep working."
+        log.info("fallback mode (%s)", reason)
+        self.publish(StatusEvent(timestamp=_utcnow(), level="degraded", message=message))
+
+    def _leave_fallback(self, message: str) -> None:
+        self._fallback = None
+        self.publish(StatusEvent(timestamp=_utcnow(), level="ok", message=message))
 
     def _suppress(self, reason: str) -> None:
         self.suppressed[reason] = self.suppressed.get(reason, 0) + 1
