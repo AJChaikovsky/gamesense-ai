@@ -99,6 +99,27 @@ Useful and not-useful ratings are saved with the tip's text (never frames) to `~
 3. Run `npm run dev`, switch to the game, and play. Tips appear top-right.
 4. Check the dashboard's **App memory** figure while playing. Its budget is 300 MB (ADR-002); if it stays well above that, we switch the shell to Tauri.
 
+## CS2 live game data (Game State Integration)
+
+CS2 can push its game state (health, armor, money, weapons, round phase, bomb) to a local URL. This is Valve's official interface for overlays and tools; nothing reads game memory. With it the coach gives instant, free rule tips (forgot armor, no defuse kit, last round of the half, low HP, post-plant) and adds exact numbers to every model prompt.
+
+One-time setup on the Windows PC:
+
+```powershell
+uv run gamesense-gsi install     # finds CS2 through Steam and writes gamestate_integration_gamesense.cfg
+```
+
+If it can't find CS2, pass the folder: `--cs2-dir "<Steam library>\steamapps\common\Counter-Strike Global Offensive\game\csgo\cfg"`. Restart CS2 afterwards. The engine listens on `127.0.0.1:3727` (`GAMESENSE_GSI_PORT`), and the dashboard's Game card says "live game data" once updates arrive.
+
+Record payloads while you play, then replay them anywhere (including the Mac) to see the same tips without the game:
+
+```bash
+uv run gamesense-engine --game cs2 --gsi-record ~/gsi/match.jsonl     # while playing
+uv run gamesense-gsi replay ~/gsi/match.jsonl --speed 2                # into a running engine
+```
+
+Rule tips go through the same pause, policy and cooldown checks as model tips. The rules live in `services/engine/src/gamesense/telemetry/cs2/rules.py`.
+
 ## Evals and the model bake-off (Milestone 2)
 
 `npm run eval` scores models on labeled clips and writes a comparison report. See [evals/README.md](evals/README.md) for recording clips, labeling them and running paid comparisons.

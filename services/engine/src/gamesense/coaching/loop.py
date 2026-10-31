@@ -22,6 +22,7 @@ from ..games.foreground import WindowInfo, foreground_window
 from ..perception import FastPath, Signals
 from ..providers import AnalysisRequest, AnalysisResult, ProviderError, VisionModelProvider
 from ..providers.prompt import context_block, system_prompt
+from ..telemetry import TelemetryFeed
 from .budget import SpendMeter
 from .convert import to_contracts
 from .cooldown import Cooldown
@@ -88,6 +89,8 @@ class CoachingLoop:
         self.spend = SpendMeter(self.config.hourly_budget_usd)
         self.paused = False
         self.tips_delivered = 0
+        self.local_tips = 0
+        self.telemetry: TelemetryFeed | None = None
         self.feedback: list[FeedbackMessage] = []
         self.feedback_log = feedback_log
         self.suppressed: dict[str, int] = {}
@@ -141,6 +144,12 @@ class CoachingLoop:
             spend_usd_last_hour=round(self.spend.last_hour(now), 5),
             hourly_budget_usd=self.spend.hourly_budget_usd,
             last_latency_ms=self._last_latency_ms,
+            telemetry=(
+                self.telemetry.source
+                if self.telemetry is not None and self.telemetry.connected()
+                else None
+            ),
+            local_tips=self.local_tips,
         )
 
     # -- main loop ----------------------------------------------------------------
@@ -197,6 +206,7 @@ class CoachingLoop:
                 last_activity=self._last_activity,
                 last_observations=self._last_observations,
                 seconds_since_last_tip=(now - last_tip) if last_tip else None,
+                telemetry=self.telemetry.facts() if self.telemetry is not None else (),
             ),
             frames_jpeg=jpegs,
             request_id=uuid.uuid4().hex,
@@ -244,25 +254,36 @@ class CoachingLoop:
 
     def _deliver(self, decision: CoachingDecision, job: _InFlight, now: float) -> None:
         age = now - job.started
-        cooldown = self.config.cooldown
-        if self.paused or not self._game.live_allowed:
-            return self._suppress("paused_or_blocked")
         if decision.confidence < self.config.min_confidence:
             return self._suppress("low_confidence")
         if age >= decision.expires_in_seconds:
             return self._suppress("expired")
         if job.change_since > self.config.max_situation_change and decision.priority != "urgent":
             return self._suppress("situation_changed")
+        remaining = max(2, int(decision.expires_in_seconds - age))
+        self._publish_tip(decision.model_copy(update={"expires_in_seconds": remaining}), now)
+
+    def submit_local(self, decision: CoachingDecision, now: float | None = None) -> bool:
+        """Deliver a tip from a local rule (no model call). True when it was shown."""
+        now = time.monotonic() if now is None else now
+        return self._publish_tip(decision, now, local=True)
+
+    def _publish_tip(self, decision: CoachingDecision, now: float, *, local: bool = False) -> bool:
+        if self.paused or not self._game.live_allowed:
+            self._suppress("paused_or_blocked")
+            return False
+        cooldown = self.config.cooldown
         blocked = cooldown.allows(decision.action, decision.message, decision.priority, now)
         if blocked:
-            return self._suppress(blocked)
-        remaining = max(2, int(decision.expires_in_seconds - age))
-        decision = decision.model_copy(update={"expires_in_seconds": remaining})
+            self._suppress(blocked)
+            return False
         cooldown.record(decision.action, decision.message, now)
         self.tips_delivered += 1
+        self.local_tips += local
         if self.feedback_log is not None:
             self.feedback_log.remember_tip(decision)
         self.publish(TipEvent(timestamp=_utcnow(), decision=decision))
+        return True
 
     def _on_error(self, message: str, now: float) -> None:
         log.warning("model call failed: %s", message)

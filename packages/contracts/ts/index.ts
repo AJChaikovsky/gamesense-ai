@@ -136,6 +136,10 @@ export interface CoachingStatus {
    * False when the game's policy blocks live coaching.
    */
   live_allowed: boolean;
+  /**
+   * Tips from local rules (no model call).
+   */
+  local_tips?: number;
   model: string;
   paused: boolean;
   policy_reason?: string | null;
@@ -145,6 +149,10 @@ export interface CoachingStatus {
    */
   spend_usd: number;
   spend_usd_last_hour: number;
+  /**
+   * Connected live game data feed, e.g. "cs2_gsi".
+   */
+  telemetry?: string | null;
   tips_delivered: number;
 }
 /**

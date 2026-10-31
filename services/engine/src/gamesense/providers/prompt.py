@@ -46,8 +46,11 @@ def context_block(
     last_activity: str | None,
     last_observations: Sequence[str],
     seconds_since_last_tip: float | None,
+    telemetry: Sequence[str] = (),
 ) -> str:
     lines = ["Context:"]
+    if telemetry:
+        lines.append(f"- Live game data (exact, reported by the game): {'; '.join(telemetry)}")
     lines.append(f"- Previous activity: {last_activity or 'unknown'}")
     if last_observations:
         lines.append(f"- Previously observed: {'; '.join(last_observations[:8])}")

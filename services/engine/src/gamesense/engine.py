@@ -13,6 +13,7 @@ from gamesense_contracts.events import ControlMessage, FeedbackMessage
 from . import __version__
 from .capture import CaptureSource, FrameRingBuffer
 from .coaching import CoachingLoop
+from .telemetry import TelemetryServer
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ class Engine:
         self.source = source
         self.bus = EventBus()
         self.coaching: CoachingLoop | None = None
+        self.telemetry_server: TelemetryServer | None = None
         self.heartbeat_interval = heartbeat_interval
         self._started_at = time.monotonic()
         self._tasks: list[asyncio.Task[None]] = []
@@ -101,6 +103,12 @@ class Engine:
         if self.source is not None:
             self.source.start()
             log.info("capture started: %s %s", self.source.kind, self.source.target)
+        if self.telemetry_server is not None:
+            try:
+                port = await self.telemetry_server.start()
+                log.info("game telemetry receiver on 127.0.0.1:%d", port)
+            except OSError as exc:  # port taken: coach still works, just without telemetry
+                log.warning("game telemetry receiver could not start: %s", exc)
         self._tasks.append(asyncio.create_task(self._heartbeat_loop(), name="heartbeat"))
         if self.coaching is not None:
             self._tasks.append(asyncio.create_task(self.coaching.run(), name="coaching"))
@@ -112,8 +120,12 @@ class Engine:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         self._tasks.clear()
+        if self.telemetry_server is not None:
+            await self.telemetry_server.stop()
         if self.coaching is not None:
             await self.coaching.provider.aclose()
+            if self.coaching.telemetry is not None:
+                self.coaching.telemetry.close()
         if self.source is not None:
             # Joining the capture thread blocks briefly; keep it off the event loop.
             await asyncio.to_thread(self.source.stop)

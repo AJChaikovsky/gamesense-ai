@@ -173,13 +173,20 @@ export default function App(): ReactNode {
           icon={<Gamepad2 className="size-4" />}
           label="Game"
           value={coach?.game_name ?? '—'}
-          hint={coach ? `${coach.provider} · ${coach.model}` : undefined}
+          hint={coach ? `${coach.provider} · ${coach.model}${coach.telemetry ? ' · live game data' : ''}` : undefined}
         />
         <Stat
           icon={<Sparkles className="size-4" />}
           label="Tips / model calls"
           value={coach ? `${coach.tips_delivered} / ${coach.calls}` : '—'}
-          hint={coach?.last_latency_ms != null ? `last call ${coach.last_latency_ms} ms` : undefined}
+          hint={
+            [
+              coach?.local_tips ? `${coach.local_tips} from game data` : null,
+              coach?.last_latency_ms != null ? `last call ${coach.last_latency_ms} ms` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || undefined
+          }
         />
         <Stat
           icon={<DollarSign className="size-4" />}
