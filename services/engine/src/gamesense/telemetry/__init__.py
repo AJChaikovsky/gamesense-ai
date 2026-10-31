@@ -18,6 +18,10 @@ class TelemetryFeed(Protocol):
 
     def facts(self) -> list[str]: ...
 
+    def topics(self) -> list[str]:
+        """Words describing the situation, used to retrieve game knowledge."""
+        ...
+
     def observations(self) -> dict[str, Any]: ...
 
     def in_combat(self) -> bool | None:
