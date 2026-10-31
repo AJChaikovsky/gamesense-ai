@@ -21,6 +21,7 @@ dependencies = [
 gamesense-engine = "gamesense.__main__:main"
 gamesense-eval = "gamesense.evals.cli:main"
 gamesense-gsi = "gamesense.telemetry.cli:main"
+gamesense-knowledge = "gamesense.knowledge.cli:main"
 
 [tool.uv.sources]
 gamesense-contracts = { workspace = true }

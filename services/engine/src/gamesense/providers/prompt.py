@@ -32,12 +32,16 @@ Rules for tips:
 - Keep confidence honest; below 0.6 means you should usually stay silent."""
 
 
-def system_prompt(game: GameProfile) -> str:
+def system_prompt(game: GameProfile, knowledge: str = "") -> str:
+    """Fixed per game (instructions plus the game's core knowledge), so it caches well."""
     focus = ", ".join(game.coaching_focus) or "general play"
-    return (
+    prompt = (
         f"{_BASE}\n\nGame: {game.name} (genre: {game.genre}).\n"
         f"Coaching priorities for this game: {focus}."
     )
+    if knowledge:
+        prompt += f"\n\nKey facts for this game (curated, trust these):\n{knowledge.strip()}"
+    return prompt
 
 
 def context_block(
@@ -47,6 +51,7 @@ def context_block(
     last_observations: Sequence[str],
     seconds_since_last_tip: float | None,
     telemetry: Sequence[str] = (),
+    knowledge: Sequence[str] = (),
 ) -> str:
     lines = ["Context:"]
     if telemetry:
@@ -58,5 +63,8 @@ def context_block(
         lines.append(f"- Tips already given recently (do not repeat): {' | '.join(recent_tips)}")
     if seconds_since_last_tip is not None:
         lines.append(f"- Seconds since last tip: {int(seconds_since_last_tip)}")
+    if knowledge:
+        lines.append("- Relevant game knowledge (curated; use it if it fits what you see):")
+        lines.extend(f"  * {k}" for k in knowledge)
     lines.append("Respond with the JSON object only.")
     return "\n".join(lines)
