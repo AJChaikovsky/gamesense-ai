@@ -33,6 +33,7 @@ from .coaching.trigger import TriggerPolicy
 from .config import DEFAULT_MODELS, Settings, load_env_file
 from .engine import Engine
 from .games import game_by_id
+from .knowledge import KnowledgeBase
 from .providers import create_provider
 from .telemetry import TelemetryServer
 from .telemetry.cs2 import Cs2Feed, load_or_create_token
@@ -133,6 +134,7 @@ def build_engine(s: Settings, *, coach: bool = True) -> Engine:
             feedback_log=(
                 FeedbackLog(default_data_dir() / "feedback.jsonl") if s.save_feedback else None
             ),
+            knowledge=KnowledgeBase.load(),
         )
         if s.gsi_port:
             attach_cs2_telemetry(engine, engine.coaching, s)

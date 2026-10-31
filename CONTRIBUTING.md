@@ -122,6 +122,10 @@ uv run gamesense-gsi replay ~/gsi/match.jsonl --speed 2                # into a 
 
 Rule tips go through the same pause, policy and cooldown checks as model tips. The rules live in `services/engine/src/gamesense/telemetry/cs2/rules.py`.
 
+## Game knowledge packs
+
+Curated markdown in `knowledge/<game>/` gives the coach facts it shouldn't guess, such as CS2 money values, Soulslike healing timing and Minecraft progression. Each game's `core.md` goes in the system prompt (stable, so providers can cache it). The other sections are indexed in SQLite FTS5 at startup, and the best matches for the current situation are added to each model call. See [knowledge/README.md](knowledge/README.md) for the format. Then run `uv run gamesense-knowledge check`, and use `uv run gamesense-knowledge search cs2 "bomb planted"` to see what the coach would retrieve.
+
 ## Evals and the model bake-off (Milestone 2)
 
 `npm run eval` scores models on labeled clips and writes a comparison report. See [evals/README.md](evals/README.md) for recording clips, labeling them and running paid comparisons.

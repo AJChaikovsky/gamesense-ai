@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from ..games import game_by_id
+from ..knowledge import KnowledgeBase
 from ..providers import AnalysisRequest, ProviderError, VisionModelProvider
 from ..providers.prompt import context_block, system_prompt
 from .dataset import EvalCase
@@ -61,11 +62,25 @@ class RunOptions:
     show_threshold: float = SHOW_THRESHOLD
 
 
-def build_request(case: EvalCase, frames: CaseFrames) -> AnalysisRequest:
-    """The same prompt the live loop sends, with no history (each case starts fresh)."""
+_KNOWLEDGE: KnowledgeBase | None = None
+
+
+def _knowledge() -> KnowledgeBase:
+    global _KNOWLEDGE
+    if _KNOWLEDGE is None:
+        _KNOWLEDGE = KnowledgeBase.load()
+    return _KNOWLEDGE
+
+
+def build_request(
+    case: EvalCase, frames: CaseFrames, knowledge: KnowledgeBase | None = None
+) -> AnalysisRequest:
+    """The same prompt the live loop sends on its first call (no history, so only
+    the game's core knowledge and no situational snippets)."""
     game = game_by_id(case.game)
+    kb = knowledge or _knowledge()
     return AnalysisRequest(
-        system_prompt=system_prompt(game),
+        system_prompt=system_prompt(game, kb.core(game.game_id)),
         context=context_block(
             recent_tips=[], last_activity=None, last_observations=[], seconds_since_last_tip=None
         ),

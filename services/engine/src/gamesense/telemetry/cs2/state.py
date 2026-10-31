@@ -159,6 +159,23 @@ class Cs2State:
             return r in (half - 1, 2 * half - 1)
         return (r - 2 * half) % OVERTIME_HALF == OVERTIME_HALF - 1
 
+    def topics(self) -> list[str]:
+        """Search words for knowledge retrieval that describe the situation."""
+        if not self.alive:
+            return []
+        out: list[str] = []
+        if self.round_phase == "freezetime":
+            out.append("buy economy money")
+            if self.is_last_round_of_half:
+                out.append("last round of the half")
+            if self.is_pistol_round:
+                out.append("pistol round")
+        if self.round_phase == "live" and (self.health or 0) <= 40:
+            out.append("low health")
+        if self.bomb == "planted":
+            out.append("post plant" if self.team == "T" else "retake defuse")
+        return out
+
     def facts(self) -> list[str]:
         """Short, model-friendly facts for the prompt's context block."""
         if not self.is_self:

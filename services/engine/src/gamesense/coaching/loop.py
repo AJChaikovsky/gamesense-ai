@@ -20,6 +20,7 @@ from ..capture import Frame, FrameRingBuffer
 from ..capture.replay import downscale
 from ..games import GENERIC, GameProfile, detect_game
 from ..games.foreground import WindowInfo, foreground_window
+from ..knowledge import KnowledgeBase
 from ..perception import FastPath, Signals
 from ..providers import AnalysisRequest, AnalysisResult, ProviderError, VisionModelProvider
 from ..providers.prompt import context_block, system_prompt
@@ -98,6 +99,7 @@ class CoachingLoop:
         detect_foreground: Callable[[], WindowInfo | None] = foreground_window,
         session_id: str | None = None,
         feedback_log: FeedbackLog | None = None,
+        knowledge: KnowledgeBase | None = None,
     ) -> None:
         self.buffer = buffer
         self.provider = provider
@@ -112,6 +114,7 @@ class CoachingLoop:
         self.telemetry: TelemetryFeed | None = None
         self.feedback: list[FeedbackMessage] = []
         self.feedback_log = feedback_log
+        self.knowledge = knowledge
         self.suppressed: dict[str, int] = {}
         self._fixed_game = fixed_game
         self._detect = detect_foreground
@@ -228,14 +231,21 @@ class CoachingLoop:
             ]
         )
         last_tip = self.config.cooldown.last_tip_time()
+        game_id = self._game.game_id
+        snippets: list[str] = []
+        if self.knowledge is not None:
+            snippets = self.knowledge.for_situation(game_id, self._situation())
         request = AnalysisRequest(
-            system_prompt=system_prompt(self._game),
+            system_prompt=system_prompt(
+                self._game, self.knowledge.core(game_id) if self.knowledge else ""
+            ),
             context=context_block(
                 recent_tips=self.config.cooldown.recent_messages(now),
                 last_activity=self._last_activity,
                 last_observations=self._last_observations,
                 seconds_since_last_tip=(now - last_tip) if last_tip else None,
                 telemetry=self.telemetry.facts() if self.telemetry is not None else (),
+                knowledge=snippets,
             ),
             frames_jpeg=jpegs,
             request_id=uuid.uuid4().hex,
@@ -301,6 +311,14 @@ class CoachingLoop:
         """
         now = time.monotonic() if now is None else now
         return self._route(decision, now, local=True)
+
+    def _situation(self) -> list[str]:
+        """What is going on right now, as text for knowledge retrieval."""
+        parts = [self._last_activity or ""]
+        parts += [f"{k} {v}" for k, v in self._last_obs_values.items()]
+        if self.telemetry is not None:
+            parts += self.telemetry.topics()
+        return parts
 
     # -- delivery -------------------------------------------------------------------
     def facts(self) -> dict[str, object]:

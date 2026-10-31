@@ -75,6 +75,9 @@ class Cs2Feed:
     def facts(self) -> list[str]:
         return self.state.facts() if self.state is not None and self.connected() else []
 
+    def topics(self) -> list[str]:
+        return self.state.topics() if self.state is not None and self.connected() else []
+
     def observations(self) -> dict[str, Any]:
         return observation_values(self.state) if self.state is not None and self.connected() else {}
 
