@@ -55,6 +55,8 @@ class Settings:
     scene_change_threshold: float = 0.06
     loop: bool = True
     save_feedback: bool = True
+    gsi_port: int = 3727  # CS2 Game State Integration receiver; 0 turns it off
+    gsi_record: str | None = None
     extra: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -78,4 +80,6 @@ class Settings:
             game=os.environ.get("GAMESENSE_GAME") or None,
             hourly_budget_usd=_float_env("GAMESENSE_HOURLY_BUDGET_USD", 0.50),
             save_feedback=os.environ.get("GAMESENSE_SAVE_FEEDBACK", "1") != "0",
+            gsi_port=int(os.environ.get("GAMESENSE_GSI_PORT") or 3727),
+            gsi_record=os.environ.get("GAMESENSE_GSI_RECORD") or None,
         )

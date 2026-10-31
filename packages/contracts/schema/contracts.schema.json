@@ -218,6 +218,12 @@
           "description": "False when the game's policy blocks live coaching.",
           "type": "boolean"
         },
+        "local_tips": {
+          "default": 0,
+          "description": "Tips from local rules (no model call).",
+          "minimum": 0,
+          "type": "integer"
+        },
         "model": {
           "type": "string"
         },
@@ -246,6 +252,18 @@
         "spend_usd_last_hour": {
           "minimum": 0.0,
           "type": "number"
+        },
+        "telemetry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Connected live game data feed, e.g. \"cs2_gsi\"."
         },
         "tips_delivered": {
           "minimum": 0,

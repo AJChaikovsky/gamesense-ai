@@ -9,3 +9,10 @@ from gamesense.tools.make_sample_clip import make_clip
 @pytest.fixture(scope="session")
 def sample_clip(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return make_clip(tmp_path_factory.mktemp("clips") / "sample.mp4", seconds=2.0, fps=30)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep tests (and engines they spawn) out of ~/.gamesense and off the GSI port."""
+    monkeypatch.setenv("GAMESENSE_DATA_DIR", str(tmp_path / "gamesense-data"))
+    monkeypatch.setenv("GAMESENSE_GSI_PORT", "0")

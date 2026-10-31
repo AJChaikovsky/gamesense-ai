@@ -19,6 +19,7 @@ import os
 import secrets
 import socket
 import sys
+from pathlib import Path
 
 import uvicorn
 
@@ -33,6 +34,8 @@ from .config import DEFAULT_MODELS, Settings, load_env_file
 from .engine import Engine
 from .games import game_by_id
 from .providers import create_provider
+from .telemetry import TelemetryServer
+from .telemetry.cs2 import Cs2Feed, load_or_create_token
 
 log = logging.getLogger("gamesense")
 
@@ -52,6 +55,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model", default=None)
     parser.add_argument("--budget", type=float, default=None, help="hourly spend cap in USD")
     parser.add_argument("--no-coach", action="store_true", help="capture only, no model calls")
+    parser.add_argument("--gsi-port", type=int, default=None, help="CS2 GSI port (0 = off)")
+    parser.add_argument("--gsi-record", default=None, help="append CS2 GSI payloads to a .jsonl")
     parser.add_argument("--no-loop", action="store_true", help="stop replay at end of clip")
     parser.add_argument("--sample-fps", type=float, default=4.0)
     parser.add_argument("--buffer-seconds", type=float, default=60.0)
@@ -79,6 +84,9 @@ def settings_from(args: argparse.Namespace) -> Settings:
     s.buffer_seconds = args.buffer_seconds
     s.max_width = args.max_width
     s.loop = not args.no_loop
+    if args.gsi_port is not None:
+        s.gsi_port = args.gsi_port
+    s.gsi_record = args.gsi_record or s.gsi_record
     return s
 
 
@@ -126,6 +134,8 @@ def build_engine(s: Settings, *, coach: bool = True) -> Engine:
                 FeedbackLog(default_data_dir() / "feedback.jsonl") if s.save_feedback else None
             ),
         )
+        if s.gsi_port:
+            attach_cs2_telemetry(engine, engine.coaching, s)
         log.info(
             "coach: provider=%s model=%s budget=$%.2f/h game=%s",
             s.provider,
@@ -134,6 +144,17 @@ def build_engine(s: Settings, *, coach: bool = True) -> Engine:
             s.game or "auto-detect",
         )
     return engine
+
+
+def attach_cs2_telemetry(engine: Engine, coach: CoachingLoop, s: Settings) -> None:
+    """Listen for CS2 Game State Integration updates and feed them to the coach."""
+    feed = Cs2Feed(
+        load_or_create_token(default_data_dir()),
+        coach.submit_local,
+        record_path=Path(s.gsi_record).expanduser() if s.gsi_record else None,
+    )
+    coach.telemetry = feed
+    engine.telemetry_server = TelemetryServer(feed.handle, port=s.gsi_port)
 
 
 async def serve(args: argparse.Namespace, s: Settings) -> None:

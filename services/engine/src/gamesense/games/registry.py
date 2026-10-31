@@ -45,7 +45,7 @@ KNOWN_GAMES: tuple[GameProfile, ...] = (
         game_id="cs2",
         name="Counter-Strike 2",
         genre="fps",
-        tier=1,  # becomes Tier 3 when the GSI adapter lands (M4)
+        tier=3,  # official telemetry via Game State Integration (telemetry/cs2)
         process_names=("cs2.exe", "cs2"),
         coaching_focus=("economy", "crosshair placement", "utility", "positioning", "trading"),
     ),

@@ -35,6 +35,10 @@ class CoachingStatus(Contract):
     spend_usd_last_hour: float = Field(ge=0.0)
     hourly_budget_usd: float = Field(ge=0.0)
     last_latency_ms: int | None = None
+    telemetry: str | None = Field(
+        default=None, description='Connected live game data feed, e.g. "cs2_gsi".'
+    )
+    local_tips: int = Field(default=0, ge=0, description="Tips from local rules (no model call).")
 
 
 class HeartbeatEvent(Contract):
