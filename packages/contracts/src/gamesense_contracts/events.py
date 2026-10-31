@@ -39,6 +39,11 @@ class CoachingStatus(Contract):
         default=None, description='Connected live game data feed, e.g. "cs2_gsi".'
     )
     local_tips: int = Field(default=0, ge=0, description="Tips from local rules (no model call).")
+    held_tips: int = Field(default=0, ge=0, description="Tips waiting for a lull in the action.")
+    fallback_reason: Literal["provider_error", "budget"] | None = Field(
+        default=None,
+        description="Set while model tips are paused; local rule tips keep working.",
+    )
 
 
 class HeartbeatEvent(Contract):

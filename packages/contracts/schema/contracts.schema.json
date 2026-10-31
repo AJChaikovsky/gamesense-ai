@@ -173,6 +173,22 @@
           "minimum": 0,
           "type": "integer"
         },
+        "fallback_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "provider_error",
+                "budget"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Set while model tips are paused; local rule tips keep working."
+        },
         "game_id": {
           "anyOf": [
             {
@@ -194,6 +210,12 @@
             }
           ],
           "default": null
+        },
+        "held_tips": {
+          "default": 0,
+          "description": "Tips waiting for a lull in the action.",
+          "minimum": 0,
+          "type": "integer"
         },
         "hourly_budget_usd": {
           "minimum": 0.0,
