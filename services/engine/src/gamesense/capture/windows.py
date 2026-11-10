@@ -109,7 +109,20 @@ class WindowsCaptureSource:
         self._buffer.append(Frame(id=f"f{index}", index=index, timestamp=now, image=image))
 
     def _resolve_target(self) -> None:
-        if self._window_name or self._window_hwnd:
+        if self._window_hwnd:
+            return
+        if self._window_name:
+            # windows-capture matches names by substring, which can grab a launcher or
+            # terminal whose title contains the game's name. Pick the window ourselves.
+            from ..games.foreground import find_window
+
+            match = find_window(self._window_name)
+            if match is not None:
+                self._window_hwnd = match.hwnd
+                self.target = match.title
+                log.info("capturing %r (%s)", match.title, match.process_name or "?")
+            else:
+                log.warning("no window matched %r; letting the capture library look", self.target)
             return
         from ..games.foreground import foreground_window
 
@@ -128,7 +141,7 @@ class WindowsCaptureSource:
             cursor_capture=False,
             draw_border=False,
             minimum_update_interval=interval_ms,
-            window_name=self._window_name,
+            window_name=None if self._window_hwnd else self._window_name,
             window_hwnd=self._window_hwnd,
         )
 
