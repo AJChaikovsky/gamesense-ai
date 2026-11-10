@@ -92,7 +92,6 @@ def list_windows() -> list[WindowCandidate]:
     user32 = ctypes.windll.user32
     found: list[WindowCandidate] = []
 
-    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def callback(hwnd: int, _lparam: int) -> bool:
         if not user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
             return True
@@ -115,7 +114,8 @@ def list_windows() -> list[WindowCandidate]:
         found.append(WindowCandidate(buf.value, name, int(hwnd), area))
         return True
 
-    user32.EnumWindows(callback, 0)
+    enum_proc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows(enum_proc(callback), 0)
     return found
 
 
