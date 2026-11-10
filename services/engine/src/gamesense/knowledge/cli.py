@@ -13,7 +13,8 @@ from ..games.registry import KNOWN_GAMES
 from .index import KnowledgeBase, query_terms
 from .pack import PackError, default_knowledge_dir, load_docs
 
-MAX_CORE_CHARS = 1500
+# About 600 tokens. The core sits in the cached system prompt, so the extra cost is small.
+MAX_CORE_CHARS = 2500
 MAX_CHUNK_CHARS = 700
 
 

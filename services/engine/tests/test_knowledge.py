@@ -12,7 +12,7 @@ from gamesense.capture import Frame, FrameRingBuffer
 from gamesense.coaching import CoachingLoop
 from gamesense.games import game_by_id
 from gamesense.knowledge import KnowledgeBase, PackError, default_knowledge_dir, parse_doc
-from gamesense.knowledge.cli import check
+from gamesense.knowledge.cli import MAX_CORE_CHARS, check
 from gamesense.knowledge.index import query_terms
 from gamesense.knowledge.pack import split_sections
 from gamesense.providers.mock import MockProvider
@@ -36,7 +36,7 @@ def test_repo_packs_pass_the_checks() -> None:
 def test_every_launch_game_has_core_and_topics(kb: KnowledgeBase) -> None:
     assert {"cs2", "fromsoft_rpg", "minecraft"} <= kb.games
     for game in ("cs2", "fromsoft_rpg", "minecraft"):
-        assert 200 < len(kb.core(game)) <= 1500
+        assert 200 < len(kb.core(game)) <= MAX_CORE_CHARS
     assert kb.core("generic") == ""
 
 
